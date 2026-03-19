@@ -26,7 +26,10 @@ export default async function InstructorAnalyticsPage() {
 
   const totalRevenue = payments?.reduce((s, p) => s + p.amount, 0) || 0
   const totalStudents = courses?.reduce((s, c) => s + c.total_students, 0) || 0
-  const avgRating = courses?.filter(c => c.average_rating > 0).reduce((s, c) => s + c.average_rating, 0) / (courses?.filter(c => c.average_rating > 0).length || 1)
+  const ratedCourses = courses?.filter(c => c.average_rating > 0) || []
+  const avgRating = ratedCourses.length
+    ? (ratedCourses.reduce((s, c) => s + c.average_rating, 0) / ratedCourses.length).toFixed(1)
+    : '0.0'
 
   // Monthly revenue last 6 months
   const monthlyRevenue = Array.from({ length: 6 }, (_, i) => {
@@ -57,7 +60,7 @@ export default async function InstructorAnalyticsPage() {
           { label: 'Total Revenue', value: formatCurrency(totalRevenue), icon: DollarSign, color: 'bg-green-50 text-green-600', trend: '+12%' },
           { label: 'Total Students', value: totalStudents, icon: Users, color: 'bg-blue-50 text-blue-600', trend: '+8%' },
           { label: 'Completions', value: completions?.length || 0, icon: TrendingUp, color: 'bg-purple-50 text-purple-600', trend: '' },
-          { label: 'Avg. Rating', value: avgRating > 0 ? avgRating.toFixed(1) : 'N/A', icon: Star, color: 'bg-yellow-50 text-yellow-600', trend: '' },
+          { label: 'Avg. Rating', value: avgRating === '0.0' ? 'N/A' : `${avgRating} ★`, icon: Star, color: 'bg-yellow-50 text-yellow-600', trend: '' },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-xl p-5 border border-gray-100">
             <div className={`w-10 h-10 ${s.color} rounded-lg flex items-center justify-center mb-3`}>

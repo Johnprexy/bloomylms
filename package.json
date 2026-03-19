@@ -2,9 +2,13 @@
   "name": "bloomylms",
   "version": "1.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/app/page.tsx",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit"
   },
   "repository": {
     "type": "git",

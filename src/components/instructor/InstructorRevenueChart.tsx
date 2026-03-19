@@ -41,7 +41,7 @@ export default function InstructorRevenueChart({ data }: Props) {
             <YAxis tick={{ fontSize: 12, fill: '#9ca3af' }} axisLine={false} tickLine={false} />
             <Tooltip
               contentStyle={{ background: '#fff', border: '1px solid #e5e7eb', borderRadius: 8, fontSize: 12 }}
-              formatter={(v: number) => [v, 'Enrollments']}
+              formatter={(v: any) => [v, 'Enrollments']}
             />
             <Bar dataKey="enrolled" fill="#10b981" radius={[4, 4, 0, 0]} />
           </BarChart>
