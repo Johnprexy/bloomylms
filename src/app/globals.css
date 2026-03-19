@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --radius: 0.625rem;
+}
+
+@layer base {
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-feature-settings: 'rlig' 1, 'calt' 1; }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: #f1f1f1; }
+  ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+  ::-webkit-scrollbar-thumb:hover { background: #a1a1a1; }
+}
+
+@layer components {
+  .bloomy-gradient {
+    background: linear-gradient(135deg, #6C3DFF 0%, #3a5eff 50%, #00c2ff 100%);
+  }
+  .bloomy-gradient-text {
+    background: linear-gradient(135deg, #6C3DFF 0%, #3a5eff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .card-hover {
+    @apply transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5;
+  }
+  .btn-primary {
+    @apply bg-bloomy-600 text-white px-6 py-2.5 rounded-lg font-medium hover:bg-bloomy-700 active:bg-bloomy-800 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply bg-white text-bloomy-600 border border-bloomy-200 px-6 py-2.5 rounded-lg font-medium hover:bg-bloomy-50 transition-colors duration-200;
+  }
+  .input-field {
+    @apply w-full px-4 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-bloomy-500 focus:border-transparent transition-all placeholder:text-gray-400;
+  }
+  .sidebar-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100 hover:text-gray-900 transition-colors;
+  }
+  .sidebar-link.active {
+    @apply bg-bloomy-50 text-bloomy-700;
+  }
+}
+
+@layer utilities {
+  .text-balance { text-wrap: balance; }
+  .animate-in { animation: fadeIn 0.3s ease-out; }
+}
+
+/* Video player */
+.video-container { position: relative; padding-bottom: 56.25%; height: 0; overflow: hidden; }
+.video-container iframe, .video-container video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+
+/* Progress bar */
+.progress-bar { transition: width 0.5s ease; }
+
+/* Course card */
+.course-card { transition: transform 0.2s ease, box-shadow 0.2s ease; }
+.course-card:hover { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(108, 61, 255, 0.1); }
+
+/* Skeleton loading */
+.skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
