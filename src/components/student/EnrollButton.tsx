@@ -43,17 +43,14 @@ export default function EnrollButton({ course, enrollment, userId }: Props) {
   }
 
   async function handleEnroll() {
-    if (course.price === 0) {
+    if (Number(course.price) === 0) {
       setLoading(true)
-      // Free course — direct enroll via API
       const res = await fetch('/api/enrollments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ course_id: course.id }),
       })
-      if (res.ok) {
-        router.push(`/learn/${course.slug}`)
-      }
+      if (res.ok) router.push(`/learn/${course.slug}`)
       setLoading(false)
       return
     }
@@ -69,7 +66,6 @@ export default function EnrollButton({ course, enrollment, userId }: Props) {
 
     const { reference, email, amount, currency } = result.data
 
-    // Load Paystack script dynamically
     const script = document.createElement('script')
     script.src = 'https://js.paystack.co/v1/inline.js'
     script.onload = () => {
@@ -84,9 +80,9 @@ export default function EnrollButton({ course, enrollment, userId }: Props) {
           setLoading(true)
           const verify = await verifyPaystackPayment(response.reference)
           if (verify.data) {
-            router.push(`/learn/${course.slug}?enrolled=true`)
+            router.push(`/learn/${course.slug}`)
           } else {
-            alert('Payment verification failed. Contact support.')
+            alert('Payment verification failed. Please contact support.')
           }
           setLoading(false)
         },
@@ -99,46 +95,28 @@ export default function EnrollButton({ course, enrollment, userId }: Props) {
 
   return (
     <div className="space-y-3">
-      <button
-        onClick={handleEnroll}
-        disabled={loading}
-        className="btn-primary w-full flex items-center justify-center gap-2 text-base py-3"
-      >
-        {loading ? (
-          <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</>
-        ) : (
-          <><ShoppingCart className="w-5 h-5" /> {course.price === 0 ? 'Enroll for Free' : 'Enroll Now'}</>
-        )}
+      <button onClick={handleEnroll} disabled={loading}
+        className="btn-primary w-full flex items-center justify-center gap-2 text-base py-3">
+        {loading
+          ? <><Loader2 className="w-5 h-5 animate-spin" /> Processing...</>
+          : <><ShoppingCart className="w-5 h-5" /> {Number(course.price) === 0 ? 'Enroll for Free' : 'Enroll Now'}</>
+        }
       </button>
 
-      {course.price > 0 && (
+      {Number(course.price) > 0 && (
         <div>
-          <button
-            onClick={() => setShowPromo(!showPromo)}
-            className="text-xs text-bloomy-600 hover:text-bloomy-700 font-medium"
-          >
+          <button onClick={() => setShowPromo(!showPromo)}
+            className="text-xs text-bloomy-600 hover:text-bloomy-700 font-medium">
             {showPromo ? 'Hide' : 'Have a promo code?'}
           </button>
           {showPromo && (
             <div className="flex gap-2 mt-2">
-              <input
-                type="text"
-                value={promoCode}
-                onChange={e => setPromoCode(e.target.value.toUpperCase())}
-                placeholder="Enter code"
-                className="input-field text-sm flex-1"
-              />
-              <button
-                onClick={() => setPromoApplied(true)}
-                className="btn-secondary text-sm px-4 py-2"
-              >
-                Apply
-              </button>
+              <input type="text" value={promoCode} onChange={e => setPromoCode(e.target.value.toUpperCase())}
+                placeholder="Enter code" className="input-field text-sm flex-1" />
+              <button onClick={() => setPromoApplied(true)} className="btn-secondary text-sm px-4 py-2">Apply</button>
             </div>
           )}
-          {promoApplied && (
-            <p className="text-xs text-green-600 mt-1">✓ Promo code applied</p>
-          )}
+          {promoApplied && <p className="text-xs text-green-600 mt-1">✓ Promo code applied</p>}
         </div>
       )}
     </div>

@@ -1,6 +1,9 @@
-# BloomyLMS — Learning Management System
+# BloomyLMS 🎓
 
-Professional LMS for **Bloomy Technologies** (bloomy360.com). Built with Next.js 14, Supabase, Tailwind CSS, and Paystack.
+> **Professional Learning Management System for Bloomy Technologies**
+> Built with Next.js 14, TypeScript, Neon PostgreSQL, NextAuth.js, Tailwind CSS
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https://github.com/Johnprexy/bloomylms)
 
 ---
 
@@ -8,73 +11,153 @@ Professional LMS for **Bloomy Technologies** (bloomy360.com). Built with Next.js
 
 | Layer | Technology |
 |-------|-----------|
-| Frontend | Next.js 14 (App Router), TypeScript, Tailwind CSS |
-| Backend | Next.js API Routes, Supabase Edge Functions |
-| Database | PostgreSQL (via Supabase) |
-| Auth | Supabase Auth (email/password, OAuth) |
-| Storage | Supabase Storage (videos, PDFs, avatars) |
+| Frontend | Next.js 14 (App Router) + TypeScript |
+| Styling | Tailwind CSS v3 |
+| Auth | NextAuth.js v4 (email/password + Google OAuth) |
+| Database | **Neon PostgreSQL** (free forever) |
 | Payments | Paystack (NGN) + Stripe (USD) |
-| Email | Resend + React Email |
-| Video CDN | Bunny.net / Mux |
-| Deployment | Vercel (frontend) + Supabase Cloud |
+| Email | Resend |
+| Deployment | Vercel (free tier) |
+
+**Total monthly cost: $0** 🎉
+
+---
+
+## ✨ Features
+
+### 👨‍🎓 Student Portal
+- Browse & enroll in courses (free and paid)
+- Full video course player with progress tracking
+- Quiz engine with auto-grading
+- Certificate download on completion
+- Live session joining
+- Discussion forums
+- Notification centre
+- Onboarding flow
+
+### 👨‍🏫 Instructor Dashboard
+- Multi-step course builder (modules + lessons)
+- Student roster management
+- Revenue & analytics charts
+- Assignment grading
+
+### 🛡️ Admin Panel
+- Full user management (roles, suspend/activate)
+- Course approval & publish controls
+- Payment reconciliation
+- Platform analytics with charts
+- Cohort management
+- System settings
+
+---
+
+## ⚡ Quick Deploy (5 minutes)
+
+### Step 1 — Create Neon Database (Free)
+
+1. Go to **[neon.tech](https://neon.tech)** → Sign up free
+2. Create a new project → copy your **Connection String** (DATABASE_URL)
+3. Open the **SQL Editor** → paste and run `neon/schema.sql`
+
+### Step 2 — Deploy to Vercel
+
+1. Fork this repo or import at **[vercel.com/new](https://vercel.com/new)**
+2. Add these **Environment Variables** in Vercel:
+
+```env
+# Required
+DATABASE_URL=postgresql://user:pass@ep-xxx.neon.tech/neondb?sslmode=require
+NEXTAUTH_SECRET=any-random-32-char-string-here
+NEXTAUTH_URL=https://your-app.vercel.app
+
+# Payments (get from paystack.com — free account)
+NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY=pk_test_xxxx
+PAYSTACK_SECRET_KEY=sk_test_xxxx
+
+# Optional — Email (resend.com free tier: 100 emails/day)
+RESEND_API_KEY=re_xxxx
+
+# Optional — Google OAuth (console.cloud.google.com)
+GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=xxxx
+```
+
+3. Click **Deploy** → live in ~2 minutes ✅
+
+### Step 3 — Make Yourself Admin
+
+In Neon SQL Editor:
+```sql
+UPDATE users SET role = 'admin' WHERE email = 'your@email.com';
+```
+
+### Step 4 — Add Seed Data (Optional)
+
+Run `neon/seed.sql` to get 4 demo courses pre-loaded.
 
 ---
 
 ## 📁 Project Structure
 
 ```
-src/
-├── app/
-│   ├── (auth)/          # Login, Register, Forgot Password
-│   ├── (dashboard)/     # Student portal (courses, player, profile, certs)
-│   ├── (instructor)/    # Instructor dashboard (courses, students, analytics)
-│   ├── (admin)/         # Admin panel (users, courses, payments, analytics)
-│   ├── api/             # API routes (enrollments, payments, certificates)
-│   └── certificate/     # Public certificate verification
-├── components/
-│   ├── admin/           # Admin-specific components
-│   ├── instructor/      # Instructor-specific components
-│   ├── layout/          # Sidebar, TopBar
-│   ├── student/         # CoursePlayer, EnrollButton
-│   └── ui/              # Shared UI (Skeleton, Toaster)
-├── lib/
-│   ├── actions/         # Server actions (auth, courses, payments)
-│   ├── supabase/        # Client, server, middleware helpers
-│   └── utils.ts         # Utility functions
-├── hooks/               # useAuth, custom hooks
-├── store/               # Zustand global state
-└── types/               # TypeScript type definitions
+bloomylms/
+├── neon/
+│   ├── schema.sql          ← Run this first in Neon SQL Editor
+│   └── seed.sql            ← Optional demo data
+├── src/
+│   ├── app/
+│   │   ├── (auth)/         ← Login, Register, Forgot Password
+│   │   ├── (dashboard)/    ← Student portal
+│   │   ├── (instructor)/   ← Instructor portal
+│   │   ├── (admin)/        ← Admin panel
+│   │   ├── api/            ← All API routes
+│   │   └── certificate/    ← Public cert verification
+│   ├── components/
+│   │   ├── admin/
+│   │   ├── instructor/
+│   │   ├── layout/         ← Sidebar, TopBar
+│   │   └── student/        ← CoursePlayer, QuizComponent
+│   └── lib/
+│       ├── auth.ts         ← NextAuth config
+│       ├── db.ts           ← Neon SQL client
+│       ├── email.ts        ← Resend email service
+│       └── actions/        ← Server Actions
+└── .env.example
 ```
 
 ---
 
-## ⚡ Quick Start
+## 👤 User Roles
 
-### 1. Clone & Install
+| Role | Access |
+|------|--------|
+| `student` | Dashboard, courses, certificates, profile |
+| `instructor` | + Course builder, students, analytics |
+| `admin` | Full platform access |
+
+---
+
+## 🗄️ Database
+
+Schema is in `neon/schema.sql`. Key tables:
+- `users` — all users (students, instructors, admins)
+- `courses` + `modules` + `lessons` — course content
+- `enrollments` + `lesson_progress` — student tracking
+- `payments` — Paystack payment records
+- `certificates` — auto-numbered certificates
+- `quizzes` + `quiz_attempts` — assessment engine
+- `notifications` + `discussions` — engagement
+
+---
+
+## 🛠️ Local Development
 
 ```bash
 git clone https://github.com/Johnprexy/bloomylms.git
 cd bloomylms
 npm install
-```
-
-### 2. Set Up Environment Variables
-
-```bash
 cp .env.example .env.local
-```
-
-Fill in your values (see `.env.example`).
-
-### 3. Set Up Supabase
-
-1. Create a new project at [supabase.com](https://supabase.com)
-2. Go to **SQL Editor** and run `supabase/schema.sql`
-3. Copy your project URL and keys to `.env.local`
-
-### 4. Run Development Server
-
-```bash
+# Fill in DATABASE_URL, NEXTAUTH_SECRET, NEXTAUTH_URL
 npm run dev
 ```
 
@@ -82,123 +165,34 @@ Open [http://localhost:3000](http://localhost:3000)
 
 ---
 
-## 🗄️ Database Setup
+## 🔑 Generating NEXTAUTH_SECRET
 
-Run `supabase/schema.sql` in your Supabase SQL Editor. This creates:
-
-- All tables (profiles, courses, modules, lessons, enrollments, payments, certificates, etc.)
-- Row-Level Security policies
-- Triggers (auto-create profile, progress tracking, certificate generation)
-- Storage buckets
-
----
-
-## 👥 User Roles
-
-| Role | Access |
-|------|--------|
-| **Student** | Browse courses, enroll, learn, track progress, download certificates |
-| **Instructor** | Create/manage courses, view students, analytics, revenue |
-| **Admin** | Full platform control — users, courses, payments, analytics, settings |
-
-### Making a user an admin
-
-In Supabase SQL Editor:
-```sql
-UPDATE profiles SET role = 'admin' WHERE email = 'your@email.com';
-```
-
----
-
-## 💳 Payment Setup
-
-### Paystack (Nigerian Naira)
-1. Get keys from [dashboard.paystack.com](https://dashboard.paystack.com)
-2. Add webhook URL: `https://yourdomain.com/api/payments/paystack/webhook`
-3. Events to listen: `charge.success`
-
-### Stripe (International)
-1. Get keys from [dashboard.stripe.com](https://dashboard.stripe.com)
-2. Add webhook endpoint for `payment_intent.succeeded`
-
----
-
-## 🎓 Course Structure
-
-```
-Course
-├── Module 1
-│   ├── Lesson 1 (video)
-│   ├── Lesson 2 (text)
-│   └── Lesson 3 (quiz)
-├── Module 2
-│   ├── Lesson 4 (video)
-│   └── Lesson 5 (assignment)
-└── Certificate (auto-issued on 100% completion)
-```
-
----
-
-## 🚢 Deployment
-
-### Vercel
 ```bash
-npm install -g vercel
-vercel --prod
+openssl rand -base64 32
+# or
+node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
 ```
 
-Add all environment variables in your Vercel project settings.
+---
 
-### Environment Variables Required
-- `NEXT_PUBLIC_SUPABASE_URL`
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`
-- `SUPABASE_SERVICE_ROLE_KEY`
-- `NEXT_PUBLIC_APP_URL`
-- `PAYSTACK_SECRET_KEY`
-- `NEXT_PUBLIC_PAYSTACK_PUBLIC_KEY`
-- `RESEND_API_KEY`
+## 🌐 Setting Up Paystack Webhook
+
+In your Paystack dashboard → Settings → Webhooks:
+```
+https://your-app.vercel.app/api/payments/paystack/webhook
+```
 
 ---
 
-## 📋 Features
+## 🛠️ Built by
 
-### Student Portal
-- ✅ Registration & email verification
-- ✅ Course catalogue with search & filters
-- ✅ Course detail pages with curriculum preview
-- ✅ Paystack & free enrollment
-- ✅ Video course player with progress tracking
-- ✅ Lesson resources & downloads
-- ✅ Quiz & assignment submission
-- ✅ Certificate generation & verification
-- ✅ Notification system
-- ✅ Profile management
-
-### Instructor Dashboard
-- ✅ Course builder (3-step wizard)
-- ✅ Course editor (info, curriculum, settings)
-- ✅ Student roster & progress
-- ✅ Revenue analytics with charts
-- ✅ Course publish/unpublish
-
-### Admin Panel
-- ✅ User management (roles, suspend/activate)
-- ✅ Course management (approve, publish, archive)
-- ✅ Payment records & reconciliation
-- ✅ Platform analytics dashboard
-- ✅ System settings
-
-### API Routes
-- ✅ `POST /api/enrollments` — Free course enrollment
-- ✅ `POST /api/payments/paystack/webhook` — Paystack webhooks
-- ✅ `POST /api/certificates/generate` — Certificate generation
-- ✅ `GET /api/courses` — Course search with pagination
+**John Ayomide Akinola**
+DevOps & Cloud Engineer | Instructor at Bloomy Technologies | MD @ Swelerion Global Ltd
+- GitHub: [github.com/Johnprexy](https://github.com/Johnprexy)
+- LinkedIn: [linkedin.com/in/john-ayomide-akinola](https://linkedin.com/in/john-ayomide-akinola)
 
 ---
 
-## 🏗️ Built by
+## 📄 License
 
-**John Ayomide Akinola**  
-Managing Director, Swelerion Global Ltd  
-Instructor, Bloomy Technologies  
-[GitHub](https://github.com/Johnprexy) · [LinkedIn](https://linkedin.com/in/john-ayomide-akinola)
+MIT © 2026 Bloomy Technologies
