@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { ArrowRight, ArrowLeft, CheckCircle, Loader2 } from 'lucide-react'
 
 const INTERESTS = [
@@ -58,17 +57,7 @@ export default function OnboardingPage() {
 
   async function finish() {
     setLoading(true)
-    const supabase = createClient()
-    const { data: { user } } = await supabase.auth.getUser()
-    if (!user) return
-
-    await supabase.from('profiles').update({
-      full_name: form.full_name,
-      phone: form.phone,
-      location: form.location,
-      onboarding_completed: true,
-    }).eq('id', user.id)
-
+    await fetch('/api/profile', { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ full_name: form.full_name, phone: form.phone, location: form.location, onboarding_completed: true }) })
     router.push('/dashboard')
   }
 

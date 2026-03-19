@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { CheckCircle, XCircle, Clock, RotateCcw, Trophy, Loader2, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -48,12 +47,12 @@ export default function QuizComponent({ quizId, lessonId, courseId, userId, onCo
   }, [timeLeft, submitted])
 
   async function fetchQuiz() {
-    const supabase = createClient()
-    const [{ data: q }, { data: qs }, { data: prev }] = await Promise.all([
-      supabase.from('quizzes').select('*').eq('id', quizId).single(),
-      supabase.from('quiz_questions').select('*').eq('quiz_id', quizId).order('position'),
-      supabase.from('quiz_attempts').select('*').eq('quiz_id', quizId).eq('student_id', userId).order('started_at', { ascending: false }),
+    const [qRes, qsRes, prevRes] = await Promise.all([
+      fetch(`/api/quiz/${quizId}`).then(r => r.json()),
+      fetch(`/api/quiz/${quizId}/questions`).then(r => r.json()),
+      fetch(`/api/quiz/${quizId}/attempts?user=${userId}`).then(r => r.json()),
     ])
+    const q = qRes.data; const qs = qsRes.data; const prev = prevRes.data
     setQuiz(q)
     setQuestions(qs || [])
     setAttemptsUsed(prev?.length || 0)
@@ -74,7 +73,6 @@ export default function QuizComponent({ quizId, lessonId, courseId, userId, onCo
   async function handleSubmit() {
     if (submitting) return
     setSubmitting(true)
-    const supabase = createClient()
 
     const totalPoints = questions.reduce((s, q) => s + q.points, 0)
     const earned = questions.reduce((s, q) => {
@@ -83,18 +81,8 @@ export default function QuizComponent({ quizId, lessonId, courseId, userId, onCo
     const scorePercent = totalPoints > 0 ? Math.round((earned / totalPoints) * 100) : 0
     const didPass = scorePercent >= (quiz?.passing_score || 70)
 
-    const { data: att } = await supabase
-      .from('quiz_attempts')
-      .insert({
-        quiz_id: quizId,
-        student_id: userId,
-        answers,
-        score: scorePercent,
-        passed: didPass,
-        completed_at: new Date().toISOString(),
-      })
-      .select()
-      .single()
+    const attRes = await fetch('/api/quiz/attempts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ quiz_id: quizId, student_id: userId, answers, score: scorePercent, passed: didPass, completed_at: new Date().toISOString() }) }).then(r => r.json())
+    const att = attRes.data
 
     setAttempt(att)
     setScore(scorePercent)

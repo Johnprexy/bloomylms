@@ -1,34 +1,22 @@
+export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { sql } from '@/lib/db'
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { data, error } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ data })
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const userId = (session.user as any).id
+  const users = await sql`SELECT id, email, full_name, avatar_url, role, phone, bio, location, linkedin_url, github_url, created_at FROM users WHERE id = ${userId} LIMIT 1`
+  return NextResponse.json({ data: users[0] })
 }
 
 export async function PATCH(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const body = await request.json()
-  const allowedFields = ['full_name', 'phone', 'bio', 'location', 'linkedin_url', 'github_url', 'avatar_url']
-  const updates = Object.fromEntries(
-    Object.entries(body).filter(([key]) => allowedFields.includes(key))
-  )
-
-  const { data, error } = await supabase
-    .from('profiles')
-    .update(updates)
-    .eq('id', user.id)
-    .select()
-    .single()
-
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ data })
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const userId = (session.user as any).id
+  const { full_name, phone, bio, location, linkedin_url, github_url } = await request.json()
+  await sql`UPDATE users SET full_name = ${full_name}, phone = ${phone}, bio = ${bio}, location = ${location}, linkedin_url = ${linkedin_url}, github_url = ${github_url}, updated_at = NOW() WHERE id = ${userId}`
+  return NextResponse.json({ success: true })
 }

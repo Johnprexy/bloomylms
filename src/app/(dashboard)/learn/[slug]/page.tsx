@@ -1,63 +1,26 @@
 import { redirect, notFound } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { sql } from '@/lib/db'
 import CoursePlayer from '@/components/student/CoursePlayer'
 
+export const dynamic = 'force-dynamic'
+
 export default async function LearnPage({ params }: { params: { slug: string } }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect(`/login?redirect=/learn/${params.slug}`)
+  const session = await getServerSession(authOptions)
+  if (!session?.user) redirect(`/login?redirect=/learn/${params.slug}`)
+  const userId = (session.user as any).id
 
-  const { data: course } = await supabase
-    .from('courses')
-    .select(`
-      *,
-      category:categories(*),
-      instructor:profiles(id, full_name, avatar_url),
-      modules(
-        id, title, position, is_published,
-        lessons(id, title, type, content, video_url, video_duration, position, is_published, is_preview,
-          resources(id, name, type, url, size_bytes))
-      )
-    `)
-    .eq('slug', params.slug)
-    .single()
-
+  const courses = await sql`SELECT c.*, cat.name as category_name, cat.icon as category_icon, u.full_name as instructor_name FROM courses c LEFT JOIN categories cat ON c.category_id = cat.id LEFT JOIN users u ON c.instructor_id = u.id WHERE c.slug = ${params.slug} LIMIT 1`
+  const course = courses[0]
   if (!course) notFound()
 
-  // Check enrollment
-  const { data: enrollment } = await supabase
-    .from('enrollments')
-    .select('*')
-    .eq('student_id', user.id)
-    .eq('course_id', course.id)
-    .single()
+  const enrollments = await sql`SELECT * FROM enrollments WHERE student_id = ${userId} AND course_id = ${course.id} LIMIT 1`
+  if (!enrollments[0]) redirect(`/courses/${params.slug}`)
 
-  if (!enrollment) redirect(`/courses/${params.slug}`)
+  const modules = await sql`SELECT m.id, m.title, m.position, json_agg(json_build_object('id',l.id,'title',l.title,'type',l.type,'content',l.content,'video_url',l.video_url,'video_duration',l.video_duration,'position',l.position,'is_preview',l.is_preview) ORDER BY l.position) FILTER (WHERE l.id IS NOT NULL) as lessons FROM modules m LEFT JOIN lessons l ON l.module_id = m.id AND l.is_published = true WHERE m.course_id = ${course.id} AND m.is_published = true GROUP BY m.id ORDER BY m.position`
 
-  // Get lesson progress
-  const { data: lessonProgress } = await supabase
-    .from('lesson_progress')
-    .select('*')
-    .eq('student_id', user.id)
-    .eq('course_id', course.id)
+  const lessonProgress = await sql`SELECT * FROM lesson_progress WHERE student_id = ${userId} AND course_id = ${course.id}`
 
-  const sortedModules = course.modules
-    ?.filter((m: any) => m.is_published)
-    .sort((a: any, b: any) => a.position - b.position)
-    .map((m: any) => ({
-      ...m,
-      lessons: m.lessons
-        ?.filter((l: any) => l.is_published)
-        .sort((a: any, b: any) => a.position - b.position)
-    }))
-
-  return (
-    <CoursePlayer
-      course={course}
-      modules={sortedModules}
-      enrollment={enrollment}
-      lessonProgress={lessonProgress || []}
-      userId={user.id}
-    />
-  )
+  return <CoursePlayer course={course as any} modules={modules} enrollment={enrollments[0] as any} lessonProgress={lessonProgress as any} userId={userId} userName={(session.user as any).name || ''} />
 }

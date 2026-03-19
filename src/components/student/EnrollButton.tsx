@@ -67,7 +67,7 @@ export default function EnrollButton({ course, enrollment, userId }: Props) {
       return
     }
 
-    const { reference, email, amount, currency, payment_id } = result.data
+    const { reference, email, amount, currency } = result.data
 
     // Load Paystack script dynamically
     const script = document.createElement('script')
@@ -79,7 +79,7 @@ export default function EnrollButton({ course, enrollment, userId }: Props) {
         amount,
         currency,
         ref: reference,
-        metadata: { course_id: course.id, payment_id },
+        metadata: { course_id: course.id },
         callback: async (response: { reference: string }) => {
           setLoading(true)
           const verify = await verifyPaystackPayment(response.reference)

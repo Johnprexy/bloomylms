@@ -1,21 +1,18 @@
 import type { Metadata } from 'next'
 import './globals.css'
 import { Toaster } from '@/components/ui/toaster'
+import Providers from '@/components/Providers'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
 
 export const metadata: Metadata = {
   title: { default: 'BloomyLMS — Bloomy Technologies', template: '%s | BloomyLMS' },
-  description: 'Professional Learning Management System for Bloomy Technologies. Master DevOps, Cloud, Cybersecurity, Data Analysis, and Web Development.',
+  description: 'Professional Learning Management System for Bloomy Technologies.',
   keywords: ['LMS', 'DevOps', 'Cloud', 'Cybersecurity', 'Lagos', 'Tech Training'],
-  openGraph: {
-    title: 'BloomyLMS — Bloomy Technologies',
-    description: 'Launch your tech career with world-class training',
-    url: 'https://lms.bloomy360.com',
-    siteName: 'BloomyLMS',
-    images: [{ url: '/og-image.png', width: 1200, height: 630 }],
-  },
 }
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default async function RootLayout({ children }: { children: React.ReactNode }) {
+  const session = await getServerSession(authOptions)
   return (
     <html lang="en" suppressHydrationWarning>
       <head>
@@ -24,8 +21,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
       </head>
       <body className="font-sans antialiased bg-white text-gray-900">
-        {children}
-        <Toaster />
+        <Providers session={session}>
+          {children}
+          <Toaster />
+        </Providers>
       </body>
     </html>
   )

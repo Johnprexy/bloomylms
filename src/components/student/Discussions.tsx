@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { MessageSquare, ThumbsUp, ChevronDown, ChevronUp, Send, Loader2 } from 'lucide-react'
 import { timeAgo, getInitials } from '@/lib/utils'
 
@@ -34,48 +33,17 @@ export default function Discussions({ courseId, lessonId, userId, userName }: Pr
   useEffect(() => { fetchDiscussions() }, [courseId, lessonId])
 
   async function fetchDiscussions() {
-    const supabase = createClient()
-    const query = supabase
-      .from('discussions')
-      .select('*, author:profiles(full_name, avatar_url)')
-      .eq('course_id', courseId)
-      .is('parent_id', null)
-      .order('is_pinned', { ascending: false })
-      .order('created_at', { ascending: false })
-
-    if (lessonId) {
-      query.eq('lesson_id', lessonId)
-    }
-
-    const { data } = await query
-    if (!data) { setLoading(false); return }
-
-    // Fetch replies for each discussion
-    const withReplies = await Promise.all(
-      data.map(async d => {
-        const { data: replies } = await supabase
-          .from('discussions')
-          .select('*, author:profiles(full_name, avatar_url)')
-          .eq('parent_id', d.id)
-          .order('created_at', { ascending: true })
-        return { ...d, replies: replies || [] }
-      })
-    )
-
-    setDiscussions(withReplies)
+    const params = new URLSearchParams({ course_id: courseId })
+    if (lessonId) params.append('lesson_id', lessonId)
+    const res = await fetch(`/api/discussions?${params}`).then(r => r.json())
+    setDiscussions(res.data || [])
     setLoading(false)
   }
 
   async function postDiscussion() {
     if (!newPost.trim()) return
     setPosting(true)
-    const supabase = createClient()
-    await supabase.from('discussions').insert({
-      course_id: courseId,
-      lesson_id: lessonId || null,
-      author_id: userId,
-      content: newPost.trim(),
-    })
+    await fetch('/api/discussions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ course_id: courseId, lesson_id: lessonId, content: newPost.trim() }) })
     setNewPost('')
     await fetchDiscussions()
     setPosting(false)
@@ -84,14 +52,7 @@ export default function Discussions({ courseId, lessonId, userId, userName }: Pr
   async function postReply(parentId: string) {
     if (!replyText.trim()) return
     setPosting(true)
-    const supabase = createClient()
-    await supabase.from('discussions').insert({
-      course_id: courseId,
-      lesson_id: lessonId || null,
-      author_id: userId,
-      content: replyText.trim(),
-      parent_id: parentId,
-    })
+    await fetch('/api/discussions', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ course_id: courseId, lesson_id: lessonId, content: replyText.trim(), parent_id: parentId }) })
     setReplyText('')
     setReplyTo(null)
     await fetchDiscussions()
@@ -99,11 +60,9 @@ export default function Discussions({ courseId, lessonId, userId, userName }: Pr
   }
 
   async function upvote(discussionId: string, currentUpvotes: number) {
-    const supabase = createClient()
-    await supabase.from('discussions').update({ upvotes: currentUpvotes + 1 }).eq('id', discussionId)
+    await fetch('/api/discussions/upvote', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id: discussionId }) })
     setDiscussions(prev => prev.map(d => d.id === discussionId ? { ...d, upvotes: d.upvotes + 1 } : d))
   }
-
   if (loading) return (
     <div className="flex items-center justify-center py-8">
       <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />

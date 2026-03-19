@@ -1,16 +1,17 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { sql } from '@/lib/db'
 import Sidebar from '@/components/layout/Sidebar'
 import TopBar from '@/components/layout/TopBar'
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: profile } = await supabase.from('profiles').select('*').eq('id', user.id).single()
-  if (!profile || profile.role !== 'admin') redirect('/dashboard')
-
+export default async function Layout({ children }: { children: React.ReactNode }) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user) redirect('/login')
+  const userId = (session.user as any).id
+  const users = await sql`SELECT * FROM users WHERE id = ${userId} LIMIT 1`
+  const profile = users[0]
+  if (!profile) redirect('/login')
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       <Sidebar profile={profile} />

@@ -1,37 +1,26 @@
+export const dynamic = 'force-dynamic'
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@/lib/supabase/server'
+import { getServerSession } from 'next-auth'
+import { authOptions } from '@/lib/auth'
+import { sql } from '@/lib/db'
 
 export async function GET() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { data } = await supabase
-    .from('notifications')
-    .select('*')
-    .eq('user_id', user.id)
-    .order('created_at', { ascending: false })
-    .limit(20)
-
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const userId = (session.user as any).id
+  const data = await sql`SELECT * FROM notifications WHERE user_id = ${userId} ORDER BY created_at DESC LIMIT 20`
   return NextResponse.json({ data })
 }
 
 export async function PATCH(request: NextRequest) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
+  const session = await getServerSession(authOptions)
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const userId = (session.user as any).id
   const { id, mark_all } = await request.json()
-
   if (mark_all) {
-    await supabase.from('notifications').update({ read: true }).eq('user_id', user.id)
-    return NextResponse.json({ success: true })
+    await sql`UPDATE notifications SET read = true WHERE user_id = ${userId}`
+  } else if (id) {
+    await sql`UPDATE notifications SET read = true WHERE id = ${id} AND user_id = ${userId}`
   }
-
-  if (id) {
-    await supabase.from('notifications').update({ read: true }).eq('id', id).eq('user_id', user.id)
-    return NextResponse.json({ success: true })
-  }
-
-  return NextResponse.json({ error: 'id or mark_all required' }, { status: 400 })
+  return NextResponse.json({ success: true })
 }
