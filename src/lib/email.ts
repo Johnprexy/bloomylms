@@ -144,3 +144,86 @@ export async function sendPasswordResetEmail(to: string, resetUrl: string) {
     `,
   })
 }
+
+export async function sendInvitationEmail(to: string, name: string, courseName: string, setupUrl: string) {
+  return sendEmail({
+    to,
+    subject: `You've been enrolled at Bloomy Technologies LMS 🎓`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+      <body style="margin:0;padding:0;background:#f4f6f8;font-family:'Segoe UI',Arial,sans-serif;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f8;padding:40px 20px;">
+          <tr><td align="center">
+            <table width="600" cellpadding="0" cellspacing="0" style="background:white;border-radius:20px;overflow:hidden;box-shadow:0 4px 24px rgba(0,0,0,0.08);">
+              <!-- Header -->
+              <tr>
+                <td style="background:linear-gradient(135deg,#6C3DFF,#3a5eff);padding:40px 40px 32px;text-align:center;">
+                  <div style="width:52px;height:52px;background:rgba(255,255,255,0.2);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;margin-bottom:16px;">
+                    <span style="color:white;font-size:24px;font-weight:900;">B</span>
+                  </div>
+                  <h1 style="color:white;margin:0;font-size:26px;font-weight:700;letter-spacing:-0.5px;">Bloomy Technologies LMS</h1>
+                  <p style="color:rgba(255,255,255,0.75);margin:8px 0 0;font-size:15px;">Your learning portal is ready</p>
+                </td>
+              </tr>
+              <!-- Body -->
+              <tr>
+                <td style="padding:40px;">
+                  <h2 style="color:#111827;margin:0 0 8px;font-size:22px;">Hi ${name || 'there'}! 👋</h2>
+                  <p style="color:#6b7280;line-height:1.7;font-size:15px;margin:0 0 24px;">
+                    You have been enrolled in <strong style="color:#111827;">${courseName}</strong> at Bloomy Technologies. Your account has been created and is ready to access.
+                  </p>
+
+                  <!-- Course pill -->
+                  <div style="background:#f0f4ff;border:1px solid #c7d7ff;border-radius:12px;padding:16px 20px;margin-bottom:28px;display:flex;align-items:center;gap:12px;">
+                    <div style="width:40px;height:40px;background:linear-gradient(135deg,#6C3DFF,#3a5eff);border-radius:10px;display:inline-flex;align-items:center;justify-content:center;flex-shrink:0;">
+                      <span style="color:white;font-size:18px;">📚</span>
+                    </div>
+                    <div>
+                      <p style="margin:0;font-size:12px;color:#6b7280;font-weight:600;text-transform:uppercase;letter-spacing:0.5px;">Enrolled Course</p>
+                      <p style="margin:4px 0 0;font-size:15px;color:#111827;font-weight:600;">${courseName}</p>
+                    </div>
+                  </div>
+
+                  <p style="color:#6b7280;line-height:1.7;font-size:15px;margin:0 0 28px;">
+                    To get started, click the button below to <strong style="color:#111827;">set your password</strong> and activate your account. This link is valid for <strong style="color:#111827;">48 hours</strong>.
+                  </p>
+
+                  <!-- CTA Button -->
+                  <div style="text-align:center;margin:32px 0;">
+                    <a href="${setupUrl}"
+                       style="background:linear-gradient(135deg,#6C3DFF,#3a5eff);color:white;padding:16px 40px;border-radius:12px;text-decoration:none;font-weight:700;font-size:16px;display:inline-block;letter-spacing:-0.2px;">
+                      Activate My Account →
+                    </a>
+                  </div>
+
+                  <p style="color:#9ca3af;font-size:13px;line-height:1.6;margin:0 0 8px;">
+                    Or copy this link into your browser:
+                  </p>
+                  <p style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;padding:12px 16px;font-size:12px;color:#6b7280;word-break:break-all;font-family:monospace;margin:0 0 28px;">
+                    ${setupUrl}
+                  </p>
+
+                  <div style="border-top:1px solid #f3f4f6;padding-top:24px;">
+                    <p style="color:#9ca3af;font-size:13px;line-height:1.6;margin:0;">
+                      If you did not expect this email, please ignore it or contact us at 
+                      <a href="mailto:support@bloomy360.com" style="color:#6C3DFF;text-decoration:none;">support@bloomy360.com</a>
+                    </p>
+                  </div>
+                </td>
+              </tr>
+              <!-- Footer -->
+              <tr>
+                <td style="background:#f9fafb;padding:20px 40px;border-top:1px solid #f3f4f6;text-align:center;">
+                  <p style="color:#9ca3af;font-size:12px;margin:0;">© 2026 Bloomy Technologies · 54B Adeniyi Jones Ave, Ikeja, Lagos</p>
+                </td>
+              </tr>
+            </table>
+          </td></tr>
+        </table>
+      </body>
+      </html>
+    `,
+  })
+}

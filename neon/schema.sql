@@ -457,3 +457,24 @@ CREATE TABLE IF NOT EXISTS bulk_enrollments (
   notes TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- ============================================================
+-- MIGRATION: Student invitation/onboarding system
+-- Run in Neon SQL Editor
+-- ============================================================
+CREATE TABLE IF NOT EXISTS invitations (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  email TEXT NOT NULL,
+  full_name TEXT,
+  course_id UUID REFERENCES courses(id) ON DELETE SET NULL,
+  token TEXT NOT NULL UNIQUE,
+  status TEXT DEFAULT 'pending' CHECK (status IN ('pending', 'accepted', 'expired')),
+  invited_by UUID REFERENCES users(id),
+  user_id UUID REFERENCES users(id) ON DELETE SET NULL,
+  expires_at TIMESTAMPTZ NOT NULL DEFAULT (NOW() + INTERVAL '48 hours'),
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  accepted_at TIMESTAMPTZ
+);
+CREATE INDEX IF NOT EXISTS idx_invitations_token ON invitations(token);
+CREATE INDEX IF NOT EXISTS idx_invitations_email ON invitations(email);
+CREATE INDEX IF NOT EXISTS idx_invitations_status ON invitations(status);
