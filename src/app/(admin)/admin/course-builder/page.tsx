@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import QuizBuilder from '@/components/admin/QuizBuilder'
+import FileUpload from '@/components/ui/FileUpload'
 import { slugify } from '@/lib/utils'
 
 const LESSON_TYPES = [
@@ -417,24 +418,17 @@ export default function CourseBuilderPage() {
                                 )}
 
                                 {lesson.type === 'file' && (
-                                  <div className="space-y-2">
-                                    <div className="flex items-center gap-2">
-                                      <FileText className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
-                                      <input value={lesson.file_url} onChange={e => updLesson(mi, li, 'file_url', e.target.value)}
-                                        className="flex-1 text-xs border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-bloomy-400"
-                                        placeholder="Paste file URL (Google Drive, Dropbox, S3, etc.)" />
-                                    </div>
-                                    {lesson.file_url && (
-                                      <div className="flex items-center gap-2 text-xs text-gray-500">
-                                        <input value={lesson.file_name} onChange={e => updLesson(mi, li, 'file_name', e.target.value)}
-                                          className="flex-1 text-xs border border-gray-200 rounded-lg px-3 py-1.5 focus:outline-none"
-                                          placeholder="Display name (e.g. Week1-Slides.pdf)" />
-                                      </div>
-                                    )}
-                                    <p className="text-xs text-gray-400 flex items-center gap-1">
-                                      <Upload className="w-3 h-3" />
-                                      Tip: Upload to Google Drive / Dropbox / OneDrive and paste the share link above
-                                    </p>
+                                  <div className="pt-1">
+                                    <FileUpload
+                                      value={lesson.file_url || ''}
+                                      fileName={lesson.file_name}
+                                      onChange={(url, name, size) => {
+                                        updLesson(mi, li, 'file_url', url)
+                                        updLesson(mi, li, 'file_name', name)
+                                        if (size) updLesson(mi, li, 'video_duration', size)
+                                        if (!lesson.title && name) updLesson(mi, li, 'title', name.replace(/\.[^/.]+$/, ''))
+                                      }}
+                                    />
                                   </div>
                                 )}
 
