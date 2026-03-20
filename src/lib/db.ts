@@ -1,21 +1,24 @@
-import { neon, type NeonQueryFunction } from '@neondatabase/serverless'
+import { neon } from '@neondatabase/serverless'
 
-let _db: NeonQueryFunction<false, false> | null = null
+// Neon's tagged template function
+// neon() returns a function that works as a tagged template: db`SELECT ...`
+// We wrap it so we can handle the missing DATABASE_URL case at build time
 
-function getDb(): NeonQueryFunction<false, false> | null {
+let _db: ((...args: any[]) => Promise<any[]>) | null = null
+
+function getDb() {
   if (!process.env.DATABASE_URL) return null
-  if (!_db) _db = neon(process.env.DATABASE_URL)
+  if (!_db) {
+    _db = neon(process.env.DATABASE_URL) as any
+  }
   return _db
 }
 
-// This is the sql tagged template function used everywhere in the app
-// Usage: await sql`SELECT * FROM users WHERE id = ${userId}`
-export async function sql(
-  strings: TemplateStringsArray,
-  ...values: any[]
-): Promise<any[]> {
+// sql tagged template — use exactly like: const rows = await sql`SELECT * FROM users`
+export function sql(strings: TemplateStringsArray, ...values: any[]): Promise<any[]> {
   const db = getDb()
-  if (!db) return []
-  const result = await db(strings, ...values)
-  return result as any[]
+  if (!db) return Promise.resolve([])
+  // neon tagged template: db`SELECT * FROM users WHERE id = ${id}`
+  // is called internally as db(strings, ...values)
+  return db(strings, ...values) as Promise<any[]>
 }
