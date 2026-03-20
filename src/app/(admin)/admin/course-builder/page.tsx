@@ -10,6 +10,7 @@ import {
 } from 'lucide-react'
 import Link from 'next/link'
 import { slugify } from '@/lib/utils'
+import QuizBuilder from '@/components/admin/QuizBuilder'
 
 const LESSON_TYPES = [
   { value: 'text_header', label: 'Text Header', icon: Type, desc: 'Day/section heading (no content)' },
@@ -32,6 +33,7 @@ export default function CourseBuilderPage() {
   const [saving, setSaving] = useState(false)
   const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set([0]))
   const [uploadingLesson, setUploadingLesson] = useState<string | null>(null)
+  const [quizLesson, setQuizLesson] = useState<{mi:number; li:number; lessonId:string; title:string} | null>(null)
 
   const [info, setInfo] = useState({
     title: '', slug: '', short_description: '', description: '',
@@ -415,6 +417,30 @@ export default function CourseBuilderPage() {
                                     rows={4} className="w-full text-xs border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-bloomy-400 resize-none"
                                     placeholder={lesson.type === 'assignment' ? 'Assignment brief, instructions, submission details...' : 'Topic content (HTML supported for rich text)...'} />
                                 )}
+                                {lesson.type === 'quiz' && (
+                                  <div className="flex items-center gap-3 bg-purple-50 border border-purple-100 rounded-xl p-3">
+                                    <HelpCircle className="w-4 h-4 text-purple-500 flex-shrink-0" />
+                                    <p className="text-xs text-purple-700 flex-1">
+                                      {selectedCourseId && lesson.id
+                                        ? 'Quiz saved — click Edit to manage questions'
+                                        : 'Save the course first, then edit quiz questions'}
+                                    </p>
+                                    {selectedCourseId && lesson.id && (
+                                      <button
+                                        onClick={() => setQuizLesson({ mi, li, lessonId: lesson.id!, title: lesson.title || 'Quiz' })}
+                                        className="text-xs font-semibold bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 flex-shrink-0">
+                                        Edit Quiz
+                                      </button>
+                                    )}
+                                    {!lesson.id && (
+                                      <button
+                                        onClick={() => saveCourse(false)}
+                                        className="text-xs font-semibold bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 flex-shrink-0">
+                                        Save First
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
@@ -431,6 +457,15 @@ export default function CourseBuilderPage() {
             </div>
           )}
         </>
+      )}
+      {/* Quiz Builder Modal */}
+      {quizLesson && selectedCourseId && (
+        <QuizBuilder
+          lessonId={quizLesson.lessonId}
+          courseId={selectedCourseId}
+          lessonTitle={quizLesson.title}
+          onClose={() => setQuizLesson(null)}
+        />
       )}
     </div>
   )
