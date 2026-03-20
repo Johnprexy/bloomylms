@@ -478,3 +478,119 @@ CREATE TABLE IF NOT EXISTS invitations (
 CREATE INDEX IF NOT EXISTS idx_invitations_token ON invitations(token);
 CREATE INDEX IF NOT EXISTS idx_invitations_email ON invitations(email);
 CREATE INDEX IF NOT EXISTS idx_invitations_status ON invitations(status);
+
+-- ============================================================
+-- MIGRATION: Add missing columns + new feature tables
+-- Run in Neon SQL Editor
+-- ============================================================
+
+-- Add external_url to lessons (for any URL content)
+ALTER TABLE lessons ADD COLUMN IF NOT EXISTS external_url TEXT;
+ALTER TABLE lessons ADD COLUMN IF NOT EXISTS file_name TEXT;
+ALTER TABLE lessons ADD COLUMN IF NOT EXISTS file_size BIGINT;
+ALTER TABLE lessons ADD COLUMN IF NOT EXISTS lesson_type_detail TEXT; -- 'text_header' | 'page' | 'video' | 'file' | 'url' | 'quiz' | 'assignment'
+
+-- Cohort-student relationship (enroll student in specific cohort)
+CREATE TABLE IF NOT EXISTS cohort_students (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  cohort_id UUID NOT NULL REFERENCES cohorts(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  enrolled_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(cohort_id, student_id)
+);
+
+-- Attendance
+CREATE TABLE IF NOT EXISTS attendance (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  cohort_id UUID REFERENCES cohorts(id),
+  session_date DATE NOT NULL,
+  session_title TEXT,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS attendance_records (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  attendance_id UUID NOT NULL REFERENCES attendance(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  status TEXT NOT NULL DEFAULT 'absent' CHECK (status IN ('present','absent','late','excused')),
+  notes TEXT,
+  marked_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(attendance_id, student_id)
+);
+
+-- Gradebook
+CREATE TABLE IF NOT EXISTS grade_items (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('attendance','assignment','midterm','final','quiz','project','other')),
+  max_score NUMERIC(6,2) NOT NULL DEFAULT 100,
+  weight_percent NUMERIC(5,2) NOT NULL DEFAULT 0,
+  due_date DATE,
+  position INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS grades (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  grade_item_id UUID NOT NULL REFERENCES grade_items(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  score NUMERIC(6,2),
+  feedback TEXT,
+  graded_by UUID REFERENCES users(id),
+  graded_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(grade_item_id, student_id)
+);
+
+-- Surveys
+CREATE TABLE IF NOT EXISTS surveys (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  description TEXT,
+  type TEXT DEFAULT 'feedback' CHECK (type IN ('pre_course','post_course','feedback','poll','general')),
+  is_anonymous BOOLEAN DEFAULT false,
+  is_active BOOLEAN DEFAULT true,
+  created_by UUID REFERENCES users(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS survey_questions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  survey_id UUID NOT NULL REFERENCES surveys(id) ON DELETE CASCADE,
+  question TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('multiple_choice','short_text','long_text','rating','yes_no')),
+  options JSONB,
+  required BOOLEAN DEFAULT true,
+  position INT DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS survey_responses (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  survey_id UUID NOT NULL REFERENCES surveys(id) ON DELETE CASCADE,
+  student_id UUID REFERENCES users(id),
+  answers JSONB NOT NULL,
+  submitted_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Prerequisites (module must be completed before unlocking next)
+CREATE TABLE IF NOT EXISTS module_prerequisites (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  module_id UUID NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
+  requires_module_id UUID NOT NULL REFERENCES modules(id) ON DELETE CASCADE,
+  UNIQUE(module_id, requires_module_id)
+);
+
+-- Lesson completion requirements
+CREATE TABLE IF NOT EXISTS lesson_requirements (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  lesson_id UUID NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+  requirement_type TEXT NOT NULL CHECK (requirement_type IN ('mark_complete','submit_assignment','pass_quiz','watch_video','view_page')),
+  min_watch_seconds INT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- User course role (e.g. "Data Analysis Student", "DevOps Facilitator")
+ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS course_role TEXT; -- 'student' | 'facilitator' | 'observer'
