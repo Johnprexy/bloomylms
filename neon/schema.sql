@@ -594,3 +594,41 @@ CREATE TABLE IF NOT EXISTS lesson_requirements (
 
 -- User course role (e.g. "Data Analysis Student", "DevOps Facilitator")
 ALTER TABLE enrollments ADD COLUMN IF NOT EXISTS course_role TEXT; -- 'student' | 'facilitator' | 'observer'
+
+-- ============================================================
+-- MIGRATION: Enhanced quiz, attendance-by-cohort, unified gradebook
+-- Run in Neon SQL Editor
+-- ============================================================
+
+-- Add question type to quiz_questions
+ALTER TABLE quiz_questions ADD COLUMN IF NOT EXISTS type TEXT DEFAULT 'multiple_choice'
+  CHECK (type IN ('multiple_choice','multiple_answer','true_false','fill_blank','short_text'));
+ALTER TABLE quiz_questions ADD COLUMN IF NOT EXISTS correct_answers JSONB; -- for multiple_answer type
+
+-- Add quiz grade_item linkage so quiz results auto-appear in gradebook
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS grade_item_id UUID REFERENCES grade_items(id) ON DELETE SET NULL;
+ALTER TABLE quizzes ADD COLUMN IF NOT EXISTS auto_grade BOOLEAN DEFAULT true;
+
+-- Add assignment submission auto-link to gradebook
+ALTER TABLE grade_items ADD COLUMN IF NOT EXISTS source_type TEXT DEFAULT 'manual'
+  CHECK (source_type IN ('manual','quiz','attendance','assignment'));
+ALTER TABLE grade_items ADD COLUMN IF NOT EXISTS source_id UUID; -- quiz_id or attendance_id
+
+-- Cohort-course for attendance
+ALTER TABLE attendance ADD COLUMN IF NOT EXISTS cohort_id UUID REFERENCES cohorts(id) ON DELETE SET NULL;
+
+-- Student gradebook view (materialized summary per student per course per cohort)
+CREATE TABLE IF NOT EXISTS student_grade_summary (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  course_id UUID NOT NULL REFERENCES courses(id) ON DELETE CASCADE,
+  cohort_id UUID REFERENCES cohorts(id) ON DELETE SET NULL,
+  attendance_score NUMERIC(5,2) DEFAULT 0,
+  assignment_score NUMERIC(5,2) DEFAULT 0,
+  quiz_score NUMERIC(5,2) DEFAULT 0,
+  exam_score NUMERIC(5,2) DEFAULT 0,
+  final_score NUMERIC(5,2) DEFAULT 0,
+  letter_grade TEXT,
+  last_updated TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(student_id, course_id)
+);
