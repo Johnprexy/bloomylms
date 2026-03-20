@@ -246,16 +246,7 @@ export default function CourseBuilderPage() {
             ))}
           </div>
 
-          {saveError && (
-            <div className="flex items-center gap-2 bg-red-50 text-red-700 text-sm px-4 py-3 rounded-xl border border-red-100 mb-4">
-              <span className="font-medium">Save failed:</span> {saveError}
-            </div>
-          )}
-          {saveSuccess && (
-            <div className="flex items-center gap-2 bg-green-50 text-green-700 text-sm px-4 py-3 rounded-xl border border-green-100 mb-4">
-              ✓ Course saved successfully!
-            </div>
-          )}
+
           {tab === 'info' && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
               <div className="grid sm:grid-cols-2 gap-5">
