@@ -1,20 +1,21 @@
-import { neon } from '@neondatabase/serverless'
+import { neon, type NeonQueryFunction } from '@neondatabase/serverless'
 
-let _sql: ReturnType<typeof neon> | null = null
+let _db: NeonQueryFunction<false, false> | null = null
 
-function getDb() {
-  if (!process.env.DATABASE_URL) {
-    // Return a no-op during build time
-    return null
-  }
-  if (!_sql) {
-    _sql = neon(process.env.DATABASE_URL)
-  }
-  return _sql
+function getDb(): NeonQueryFunction<false, false> | null {
+  if (!process.env.DATABASE_URL) return null
+  if (!_db) _db = neon(process.env.DATABASE_URL)
+  return _db
 }
 
-export async function sql(strings: TemplateStringsArray, ...values: any[]): Promise<any[]> {
+// This is the sql tagged template function used everywhere in the app
+// Usage: await sql`SELECT * FROM users WHERE id = ${userId}`
+export async function sql(
+  strings: TemplateStringsArray,
+  ...values: any[]
+): Promise<any[]> {
   const db = getDb()
   if (!db) return []
-  return db(strings, ...values) as Promise<any[]>
+  const result = await db(strings, ...values)
+  return result as any[]
 }
