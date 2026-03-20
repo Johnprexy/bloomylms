@@ -7,24 +7,27 @@ import { useSession, signOut } from 'next-auth/react'
 import {
   LayoutDashboard, BookOpen, Award, Video, User,
   Users, BarChart2, DollarSign, Settings, GraduationCap,
-  LogOut, Shield, UserPlus, BookMarked, Calendar,
-  PlusCircle, Layers, X, ChevronRight
+  LogOut, UserPlus, BookMarked, Calendar,
+  PlusCircle, Layers, X, FlaskConical, MessageSquare
 } from 'lucide-react'
 
+// Student nav — no "Browse Courses", focused on their content
 const studentNav = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { href: '/courses', icon: BookOpen, label: 'Browse Courses' },
   { href: '/dashboard/my-courses', icon: BookMarked, label: 'My Courses' },
+  { href: '/dashboard/labs', icon: FlaskConical, label: 'Labs & Resources' },
   { href: '/dashboard/live-sessions', icon: Video, label: 'Live Sessions' },
   { href: '/dashboard/certificates', icon: Award, label: 'Certificates' },
   { href: '/dashboard/profile', icon: User, label: 'Profile' },
 ]
+
 const instructorNav = [
   { href: '/instructor/courses', icon: BookOpen, label: 'My Courses' },
   { href: '/instructor/courses/new', icon: PlusCircle, label: 'Create Course' },
-  { href: '/instructor/students', icon: Users, label: 'Students' },
+  { href: '/instructor/students', icon: Users, label: 'My Students' },
   { href: '/instructor/analytics', icon: BarChart2, label: 'Analytics' },
 ]
+
 const adminNav = [
   { href: '/admin/analytics', icon: BarChart2, label: 'Overview' },
   { href: '/admin/users', icon: Users, label: 'All Users' },
@@ -35,6 +38,7 @@ const adminNav = [
   { href: '/admin/cohorts', icon: Calendar, label: 'Cohorts' },
   { href: '/admin/payments', icon: DollarSign, label: 'Payments' },
 ]
+
 const superAdminNav = [
   { href: '/admin/settings', icon: Settings, label: 'System Settings' },
 ]
@@ -58,7 +62,7 @@ function NavSection({ title, items, pathname, onNavigate }: any) {
       <div className="space-y-0.5">
         {items.map((item: any) => (
           <NavItem key={item.href} {...item}
-            active={pathname === item.href || (item.href !== '/dashboard' && item.href !== '/courses' && pathname.startsWith(item.href))}
+            active={pathname === item.href || (item.href !== '/dashboard' && pathname.startsWith(item.href))}
             onClick={onNavigate}
           />
         ))}
@@ -67,7 +71,6 @@ function NavSection({ title, items, pathname, onNavigate }: any) {
   )
 }
 
-// Expose open state via a global event so TopBar can trigger it
 export function openMobileSidebar() {
   window.dispatchEvent(new CustomEvent('open-sidebar'))
 }
@@ -82,7 +85,6 @@ export default function Sidebar() {
   const isAdmin = role === 'admin' || isSuperAdmin
   const isInstructor = role === 'instructor' || isAdmin
   const name = session?.user?.name || 'User'
-  const email = session?.user?.email || ''
   const initials = name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()
 
   const roleBadge = isSuperAdmin
@@ -97,18 +99,19 @@ export default function Sidebar() {
     return () => window.removeEventListener('open-sidebar', handler)
   }, [])
 
-  // Close on route change (mobile)
   useEffect(() => { setMobileOpen(false) }, [pathname])
 
   const SidebarContent = ({ onNavigate }: { onNavigate?: () => void }) => (
     <>
-      {/* Logo */}
       <div className="flex items-center justify-between p-4 border-b border-gray-100 flex-shrink-0">
         <Link href="/dashboard" onClick={onNavigate} className="flex items-center gap-2.5">
           <div className="w-8 h-8 bloomy-gradient rounded-lg flex items-center justify-center">
             <span className="text-white font-bold text-sm">B</span>
           </div>
-          <span className="font-bold text-gray-900 text-sm">BloomyLMS</span>
+          <div>
+            <p className="font-bold text-gray-900 text-sm leading-none">BloomyLMS</p>
+            <p className="text-xs text-gray-400 leading-none mt-0.5">Bloomy Technologies</p>
+          </div>
         </Link>
         {onNavigate && (
           <button onClick={onNavigate} className="text-gray-400 hover:text-gray-600 p-1 lg:hidden">
@@ -117,28 +120,25 @@ export default function Sidebar() {
         )}
       </div>
 
-      {/* Nav */}
       <div className="flex-1 overflow-y-auto p-3">
         {isAdmin && (
           <>
             <NavSection title="Admin" items={adminNav} pathname={pathname} onNavigate={onNavigate} />
             {isSuperAdmin && <NavSection title="Super Admin" items={superAdminNav} pathname={pathname} onNavigate={onNavigate} />}
             <NavSection title="Instructor" items={instructorNav} pathname={pathname} onNavigate={onNavigate} />
-            <NavSection title="Portal" items={studentNav} pathname={pathname} onNavigate={onNavigate} />
+            <NavSection title="Student View" items={studentNav} pathname={pathname} onNavigate={onNavigate} />
           </>
         )}
         {!isAdmin && isInstructor && (
           <>
             <NavSection title="Teaching" items={instructorNav} pathname={pathname} onNavigate={onNavigate} />
-            <NavSection title="Portal" items={studentNav} pathname={pathname} onNavigate={onNavigate} />
           </>
         )}
         {!isInstructor && (
-          <NavSection title="Learning" items={studentNav} pathname={pathname} onNavigate={onNavigate} />
+          <NavSection title="My Learning" items={studentNav} pathname={pathname} onNavigate={onNavigate} />
         )}
       </div>
 
-      {/* User footer */}
       <div className="p-3 border-t border-gray-100 flex-shrink-0">
         <div className="flex items-center gap-3 px-2 py-2 rounded-xl">
           <div className="w-9 h-9 bloomy-gradient rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
@@ -148,7 +148,7 @@ export default function Sidebar() {
             <p className="text-xs font-semibold text-gray-900 truncate">{name}</p>
             <span className={`text-xs px-1.5 py-0.5 rounded-full font-medium ${roleBadge.color}`}>{roleBadge.label}</span>
           </div>
-          <button onClick={() => signOut({ callbackUrl: '/login' })} className="text-gray-400 hover:text-red-500 transition-colors p-1.5 rounded-lg hover:bg-gray-100" title="Sign out">
+          <button onClick={() => signOut({ callbackUrl: '/login' })} className="text-gray-400 hover:text-red-500 p-1.5 rounded-lg hover:bg-gray-100" title="Sign out">
             <LogOut className="w-4 h-4" />
           </button>
         </div>
@@ -158,20 +158,13 @@ export default function Sidebar() {
 
   return (
     <>
-      {/* ── DESKTOP sidebar (lg+) ── */}
       <aside className="hidden lg:flex w-64 bg-white border-r border-gray-100 flex-col flex-shrink-0 h-screen sticky top-0 overflow-hidden">
         <SidebarContent />
       </aside>
 
-      {/* ── MOBILE drawer ── */}
-      {/* Backdrop */}
       {mobileOpen && (
-        <div
-          className="fixed inset-0 bg-black/40 z-40 lg:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
+        <div className="fixed inset-0 bg-black/40 z-40 lg:hidden" onClick={() => setMobileOpen(false)} />
       )}
-      {/* Drawer */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-72 bg-white flex flex-col shadow-2xl transform transition-transform duration-300 ease-in-out lg:hidden ${
         mobileOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
