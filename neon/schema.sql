@@ -632,3 +632,21 @@ CREATE TABLE IF NOT EXISTS student_grade_summary (
   last_updated TIMESTAMPTZ DEFAULT NOW(),
   UNIQUE(student_id, course_id)
 );
+
+-- Assignment submissions
+CREATE TABLE IF NOT EXISTS assignment_submissions (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  lesson_id UUID NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+  course_id UUID REFERENCES courses(id) ON DELETE CASCADE,
+  student_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  file_url TEXT NOT NULL,
+  file_name TEXT,
+  file_size BIGINT,
+  notes TEXT,
+  status TEXT DEFAULT 'submitted' CHECK (status IN ('submitted','graded','returned')),
+  grade NUMERIC(5,2),
+  feedback TEXT,
+  graded_by UUID REFERENCES users(id),
+  submitted_at TIMESTAMPTZ DEFAULT NOW(),
+  graded_at TIMESTAMPTZ
+);

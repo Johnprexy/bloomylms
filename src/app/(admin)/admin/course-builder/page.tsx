@@ -6,7 +6,7 @@ import {
   PlusCircle, Trash2, GripVertical, Save, ArrowLeft, Video, FileText,
   HelpCircle, Paperclip, ChevronDown, ChevronRight, Loader2, Globe,
   EyeOff, BookOpen, Link2, Type, AlignLeft, Lock, Unlock, Upload,
-  X, ChevronUp
+  X, ChevronUp, MessageSquare
 } from 'lucide-react'
 import Link from 'next/link'
 import QuizBuilder from '@/components/admin/QuizBuilder'
@@ -14,13 +14,14 @@ import FileUpload from '@/components/ui/FileUpload'
 import { slugify } from '@/lib/utils'
 
 const LESSON_TYPES = [
-  { value: 'text_header', label: 'Text Header', icon: Type, desc: 'Day/section heading (no content)' },
-  { value: 'page', label: 'Page / Topic', icon: AlignLeft, desc: 'Text content for a topic' },
+  { value: 'text_header', label: 'Text Header', icon: Type, desc: 'Section heading / day label' },
+  { value: 'page', label: 'Page / Topic', icon: AlignLeft, desc: 'Rich text topic content' },
   { value: 'video', label: 'Video', icon: Video, desc: 'YouTube, Vimeo or direct URL' },
   { value: 'file', label: 'File / Document', icon: FileText, desc: 'PDF, PPTX, Word, ZIP etc.' },
   { value: 'url', label: 'External URL', icon: Link2, desc: 'Link to any external page' },
   { value: 'quiz', label: 'Quiz', icon: HelpCircle, desc: 'Auto-graded quiz questions' },
-  { value: 'assignment', label: 'Assignment', icon: Paperclip, desc: 'Submission task with brief' },
+  { value: 'assignment', label: 'Assignment', icon: Paperclip, desc: 'Students upload file submission' },
+  { value: 'survey', label: 'Survey', icon: MessageSquare, desc: 'Feedback form / poll' },
 ]
 
 const DIFFICULTIES = ['beginner', 'intermediate', 'advanced']
@@ -446,10 +447,31 @@ export default function CourseBuilderPage() {
                                     {!lesson.id && <p className="text-xs text-purple-500">Save course first to add questions</p>}
                                   </div>
                                 )}
-                                {(lesson.type === 'page' || lesson.type === 'assignment') && (
+                                {lesson.type === 'page' && (
                                   <textarea value={lesson.content} onChange={e => updLesson(mi, li, 'content', e.target.value)}
                                     rows={4} className="w-full text-xs border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-bloomy-400 resize-none"
-                                    placeholder={lesson.type === 'assignment' ? 'Assignment brief, instructions, submission details...' : 'Topic content (HTML supported for rich text)...'} />
+                                    placeholder="Topic content — describe what students will learn..." />
+                                )}
+                                {lesson.type === 'assignment' && (
+                                  <div className="space-y-2">
+                                    <textarea value={lesson.content} onChange={e => updLesson(mi, li, 'content', e.target.value)}
+                                      rows={3} className="w-full text-xs border border-gray-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-bloomy-400 resize-none"
+                                      placeholder="Assignment brief — describe the task, requirements, submission format..." />
+                                    <p className="text-xs text-orange-600 flex items-center gap-1.5">
+                                      <Paperclip className="w-3 h-3" />
+                                      Students will upload a file to submit this assignment
+                                    </p>
+                                  </div>
+                                )}
+                                {lesson.type === 'survey' && (
+                                  <div className="bg-purple-50 border border-purple-100 rounded-lg p-3 space-y-2">
+                                    <p className="text-xs text-purple-700 font-medium flex items-center gap-1.5">
+                                      <MessageSquare className="w-3.5 h-3.5" />Survey lesson — link to a survey from Admin → Surveys & Polls
+                                    </p>
+                                    <input value={lesson.content} onChange={e => updLesson(mi, li, 'content', e.target.value)}
+                                      className="w-full text-xs border border-purple-200 rounded-lg px-3 py-1.5 focus:outline-none bg-white"
+                                      placeholder="Optional: paste survey embed URL or leave blank" />
+                                  </div>
                                 )}
                                 {lesson.type === 'quiz' && (
                                   <div className="flex items-center gap-3 bg-purple-50 border border-purple-100 rounded-xl p-3">
