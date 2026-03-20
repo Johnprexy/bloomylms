@@ -8,7 +8,7 @@ import {
   LayoutDashboard, BookOpen, Award, Video, User,
   Users, BarChart2, DollarSign, Settings, GraduationCap,
   LogOut, UserPlus, BookMarked, Calendar,
-  PlusCircle, Layers, X, FlaskConical, ClipboardList, Star, MessageSquare
+  PlusCircle, Layers, X, FlaskConical, ClipboardList, Star, MessageSquare, HelpCircle
 } from 'lucide-react'
 
 // Student nav — no "Browse Courses", focused on their content
@@ -35,6 +35,7 @@ const adminNav = [
   { href: '/admin/instructors', icon: GraduationCap, label: 'Instructors' },
   { href: '/admin/courses', icon: BookOpen, label: 'All Courses' },
   { href: '/admin/course-builder', icon: Layers, label: 'Course Builder' },
+  { href: '/admin/quiz-builder', icon: HelpCircle, label: 'Quiz Builder' },
   { href: '/admin/cohorts', icon: Calendar, label: 'Cohorts' },
   { href: '/admin/payments', icon: DollarSign, label: 'Payments' },
   { href: '/admin/attendance', icon: ClipboardList, label: 'Attendance' },
