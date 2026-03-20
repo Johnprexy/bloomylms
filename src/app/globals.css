@@ -63,3 +63,68 @@
 
 /* Skeleton loading */
 .skeleton { background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%); background-size: 200% 100%; animation: shimmer 1.5s infinite; }
+
+/* ── Mobile / Responsive Utilities ──────────────────────────── */
+
+/* Safe area for bottom nav (iPhone notch) */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Horizontal scroll snap for mobile carousels */
+.scroll-snap-x {
+  scroll-snap-type: x mandatory;
+  -webkit-overflow-scrolling: touch;
+}
+.scroll-snap-item {
+  scroll-snap-align: start;
+}
+
+/* Touch-friendly tap targets */
+@media (max-width: 1024px) {
+  .btn-primary, .btn-secondary {
+    min-height: 44px;
+  }
+  input, select, textarea {
+    font-size: 16px !important; /* Prevents iOS zoom on focus */
+  }
+}
+
+/* Hide scrollbar on mobile horizontal scroll */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+/* Mobile-first table override — stack rows */
+@media (max-width: 640px) {
+  .mobile-stack table,
+  .mobile-stack thead,
+  .mobile-stack tbody,
+  .mobile-stack tr {
+    display: block;
+  }
+  .mobile-stack th { display: none; }
+  .mobile-stack td {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 16px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+  .mobile-stack td::before {
+    content: attr(data-label);
+    font-size: 11px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    flex-shrink: 0;
+    margin-right: 8px;
+  }
+}
+
+/* Prevent content overflow on mobile */
+@media (max-width: 1024px) {
+  .max-w-5xl, .max-w-6xl, .max-w-7xl {
+    max-width: 100%;
+  }
+}
