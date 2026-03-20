@@ -14,7 +14,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
   if (!profile) redirect('/login')
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
-      <Sidebar profile={profile} />
+      <Sidebar />
       <div className="flex-1 flex flex-col overflow-hidden">
         <TopBar profile={profile} />
         <main className="flex-1 overflow-y-auto p-6">{children}</main>

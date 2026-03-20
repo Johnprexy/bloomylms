@@ -425,3 +425,35 @@ CREATE OR REPLACE TRIGGER update_users_updated_at BEFORE UPDATE ON users FOR EAC
 CREATE OR REPLACE TRIGGER update_courses_updated_at BEFORE UPDATE ON courses FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE OR REPLACE TRIGGER update_modules_updated_at BEFORE UPDATE ON modules FOR EACH ROW EXECUTE FUNCTION update_updated_at();
 CREATE OR REPLACE TRIGGER update_lessons_updated_at BEFORE UPDATE ON lessons FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+-- ============================================================
+-- MIGRATION: Add super_admin role + content management tables
+-- Run this in Neon SQL Editor AFTER initial schema
+-- ============================================================
+
+-- 1. Add super_admin to role enum
+DO $$ BEGIN
+  ALTER TYPE user_role ADD VALUE IF NOT EXISTS 'super_admin';
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
+
+-- 2. Videos/resources table for lessons
+CREATE TABLE IF NOT EXISTS lesson_videos (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  lesson_id UUID NOT NULL REFERENCES lessons(id) ON DELETE CASCADE,
+  title TEXT,
+  video_url TEXT NOT NULL,
+  duration_seconds INT DEFAULT 0,
+  position INT DEFAULT 0,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- 3. Bulk enrollment table (admin can enroll multiple students at once)
+CREATE TABLE IF NOT EXISTS bulk_enrollments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  admin_id UUID NOT NULL REFERENCES users(id),
+  course_id UUID NOT NULL REFERENCES courses(id),
+  enrolled_count INT DEFAULT 0,
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);

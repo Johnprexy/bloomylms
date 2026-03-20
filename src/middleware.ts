@@ -4,15 +4,25 @@ import { NextResponse } from 'next/server'
 export default withAuth(
   function middleware(req) {
     const token = req.nextauth.token
+    const role = token?.role as string
     const pathname = req.nextUrl.pathname
 
+    const isSuperAdmin = role === 'super_admin'
+    const isAdmin = role === 'admin' || isSuperAdmin
+    const isInstructor = role === 'instructor' || isAdmin
+
+    // Super admin only
+    if (pathname.startsWith('/admin/settings') && !isSuperAdmin) {
+      return NextResponse.redirect(new URL('/admin/analytics', req.url))
+    }
+
     // Admin-only routes
-    if (pathname.startsWith('/admin') && token?.role !== 'admin') {
+    if (pathname.startsWith('/admin') && !isAdmin) {
       return NextResponse.redirect(new URL('/dashboard', req.url))
     }
 
     // Instructor + admin routes
-    if (pathname.startsWith('/instructor') && !['instructor', 'admin'].includes(token?.role as string)) {
+    if (pathname.startsWith('/instructor') && !isInstructor) {
       return NextResponse.redirect(new URL('/dashboard', req.url))
     }
 
