@@ -3,57 +3,103 @@ import { NextRequest, NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
+import bcrypt from 'bcryptjs'
+import crypto from 'crypto'
 
 function isAdmin(role: string) { return role === 'admin' || role === 'super_admin' }
 
-export async function GET(request: NextRequest) {
-  const session = await getServerSession(authOptions)
-  if (!session?.user || !isAdmin((session.user as any).role)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { searchParams } = new URL(request.url)
-  const course_id = searchParams.get('course_id')
-  const search = searchParams.get('search') || ''
-  const filter = searchParams.get('filter') || 'all'
-
-  if (!course_id) return NextResponse.json({ error: 'course_id required' }, { status: 400 })
-
-  const users = await sql`
-    SELECT u.id, u.email, u.full_name, u.role, u.is_active,
-      EXISTS(SELECT 1 FROM enrollments e WHERE e.student_id = u.id AND e.course_id = ${course_id}) as enrolled
-    FROM users u
-    WHERE u.role IN ('student', 'instructor')
-      AND u.is_active = true
-      AND (${search} = '' OR u.full_name ILIKE ${'%'+search+'%'} OR u.email ILIKE ${'%'+search+'%'})
-    ORDER BY u.full_name ASC
-  `
-
-  const filtered = filter === 'enrolled'
-    ? users.filter((u: any) => u.enrolled)
-    : filter === 'not_enrolled'
-    ? users.filter((u: any) => !u.enrolled)
-    : users
-
-  return NextResponse.json({ data: filtered })
-}
-
 export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
-  if (!session?.user || !isAdmin((session.user as any).role)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  const { course_id, user_ids } = await request.json()
-  if (!course_id || !user_ids?.length) return NextResponse.json({ error: 'course_id and user_ids required' }, { status: 400 })
-
-  let enrolled = 0, skipped = 0
-
-  for (const userId of user_ids) {
-    const existing = await sql`SELECT id FROM enrollments WHERE student_id = ${userId} AND course_id = ${course_id} LIMIT 1`
-    if (existing[0]) { skipped++; continue }
-    await sql`INSERT INTO enrollments (student_id, course_id, status) VALUES (${userId}, ${course_id}, 'active')`
-    await sql`INSERT INTO notifications (user_id, title, message, type, link) VALUES (${userId}, '🎉 You have been enrolled!', 'An admin has enrolled you in a new course. Start learning now!', 'success', '/dashboard')`
-    enrolled++
+  if (!session?.user || !isAdmin((session.user as any).role)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  await sql`UPDATE courses SET total_students = (SELECT COUNT(*) FROM enrollments WHERE course_id = ${course_id}) WHERE id = ${course_id}`
+  const rows = await request.json() as { email: string; full_name?: string; course_id: string }[]
+  if (!rows?.length) return NextResponse.json({ error: 'No data provided' }, { status: 400 })
 
-  return NextResponse.json({ data: { enrolled, skipped } })
+  const results: { email: string; status: string; message: string }[] = []
+  const appUrl = process.env.NEXTAUTH_URL || 'https://bloomylms.vercel.app'
+
+  for (const row of rows) {
+    const email = row.email?.toLowerCase().trim()
+    if (!email || !row.course_id) {
+      results.push({ email: email || '?', status: 'skipped', message: 'Missing email or course' })
+      continue
+    }
+
+    // Check course exists
+    const course = await sql`SELECT id, title FROM courses WHERE id = ${row.course_id} LIMIT 1`
+    if (!course[0]) {
+      results.push({ email, status: 'error', message: 'Course not found' })
+      continue
+    }
+
+    // Check if user exists
+    const existing = await sql`SELECT id, full_name, role FROM users WHERE LOWER(email) = ${email} LIMIT 1`
+
+    let userId: string
+
+    if (existing[0]) {
+      userId = existing[0].id
+      // Check already enrolled
+      const enrolled = await sql`SELECT id FROM enrollments WHERE student_id = ${userId} AND course_id = ${row.course_id} LIMIT 1`
+      if (enrolled[0]) {
+        results.push({ email, status: 'skipped', message: `Already enrolled in ${course[0].title}` })
+        continue
+      }
+    } else {
+      // Create new user account with temporary password
+      const tempPassword = crypto.randomBytes(4).toString('hex').toUpperCase() // e.g. A1B2C3D4
+      const hash = await bcrypt.hash(tempPassword, 10)
+      const fullName = row.full_name?.trim() || email.split('@')[0]
+
+      const newUser = await sql`
+        INSERT INTO users (email, full_name, password_hash, role, is_active, email_verified)
+        VALUES (${email}, ${fullName}, ${hash}, 'student', true, true)
+        RETURNING id
+      `
+      userId = newUser[0].id
+
+      // Store temp password in invitation for display to admin
+      await sql`
+        INSERT INTO invitations (email, full_name, course_id, token, status, invited_by, expires_at)
+        VALUES (${email}, ${fullName}, ${row.course_id}, ${tempPassword}, 'pending', ${(session.user as any).id}, NOW() + INTERVAL '30 days')
+        ON CONFLICT DO NOTHING
+      `
+
+      results.push({
+        email,
+        status: 'created',
+        message: `Account created. Temp password: ${tempPassword}`,
+      })
+    }
+
+    // Enroll in course
+    await sql`
+      INSERT INTO enrollments (student_id, course_id, status)
+      VALUES (${userId}, ${row.course_id}, 'active')
+      ON CONFLICT DO NOTHING
+    `
+    await sql`UPDATE courses SET total_students = COALESCE(total_students,0) + 1 WHERE id = ${row.course_id}`
+
+    // Try send email (best-effort, won't block on failure)
+    try {
+      const { sendInvitationEmail } = await import('@/lib/email')
+      const setupUrl = `${appUrl}/login`
+      await sendInvitationEmail(email, row.full_name || '', course[0].title, setupUrl)
+    } catch (_) { /* email optional */ }
+
+    if (!existing[0]) {
+      // already pushed created message above
+    } else {
+      results.push({ email, status: 'enrolled', message: `Enrolled in ${course[0].title}` })
+    }
+  }
+
+  const enrolled = results.filter(r => r.status === 'enrolled' || r.status === 'created').length
+  const created  = results.filter(r => r.status === 'created').length
+  const skipped  = results.filter(r => r.status === 'skipped').length
+  const errors   = results.filter(r => r.status === 'error').length
+
+  return NextResponse.json({ data: { enrolled, created, skipped, errors, results } })
 }
