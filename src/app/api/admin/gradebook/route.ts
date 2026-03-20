@@ -4,7 +4,7 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
 
-function isAdmin(r: string) { return ['admin', 'super_admin', 'instructor'].includes(r) }
+function isAdmin(r: string) { return ['admin','super_admin','instructor'].includes(r) }
 
 export async function GET(request: NextRequest) {
   const session = await getServerSession(authOptions)
@@ -27,9 +27,10 @@ export async function POST(request: NextRequest) {
   const session = await getServerSession(authOptions)
   if (!session?.user || !isAdmin((session.user as any).role)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const { course_id, title, category, max_score, weight_percent, due_date } = await request.json()
+  const count = await sql`SELECT COUNT(*) as n FROM grade_items WHERE course_id = ${course_id}`
   const data = await sql`
-    INSERT INTO grade_items (course_id, title, category, max_score, weight_percent, due_date)
-    VALUES (${course_id}, ${title}, ${category}, ${max_score || 100}, ${weight_percent || 0}, ${due_date || null})
+    INSERT INTO grade_items (course_id, title, category, max_score, weight_percent, due_date, position)
+    VALUES (${course_id}, ${title}, ${category}, ${max_score || 100}, ${weight_percent || 0}, ${due_date || null}, ${Number(count[0].n)})
     RETURNING *
   `
   return NextResponse.json({ data: data[0] })
@@ -44,8 +45,20 @@ export async function PATCH(request: NextRequest) {
     await sql`
       INSERT INTO grades (grade_item_id, student_id, score, graded_by, graded_at)
       VALUES (${g.grade_item_id}, ${g.student_id}, ${g.score}, ${userId}, NOW())
-      ON CONFLICT (grade_item_id, student_id) DO UPDATE SET score = EXCLUDED.score, graded_by = EXCLUDED.graded_by, graded_at = NOW()
+      ON CONFLICT (grade_item_id, student_id) DO UPDATE
+      SET score = EXCLUDED.score, graded_by = EXCLUDED.graded_by, graded_at = NOW()
     `
   }
+  return NextResponse.json({ success: true })
+}
+
+export async function DELETE(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user || !isAdmin((session.user as any).role)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { searchParams } = new URL(request.url)
+  const item_id = searchParams.get('item_id')
+  if (!item_id) return NextResponse.json({ error: 'item_id required' }, { status: 400 })
+  await sql`DELETE FROM grades WHERE grade_item_id = ${item_id}`
+  await sql`DELETE FROM grade_items WHERE id = ${item_id}`
   return NextResponse.json({ success: true })
 }
