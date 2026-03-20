@@ -68,34 +68,48 @@ export default function CourseBuilderPage() {
 
   async function loadCourse(courseId: string) {
     setSelectedCourseId(courseId)
-    const [courseRes, modsRes] = await Promise.all([
-      fetch(`/api/instructor/courses/${courseId}`).then(r => r.json()),
-      fetch(`/api/instructor/courses/${courseId}/modules`).then(r => r.json()),
-    ])
-    if (courseRes.data) {
-      const c = courseRes.data
-      setInfo({
-        title: c.title || '', slug: c.slug || '', short_description: c.short_description || '',
-        description: c.description || '', category_id: c.category_id || '',
-        difficulty: c.difficulty || 'beginner', duration_weeks: c.duration_weeks || 12,
-        price: c.price || 0, currency: c.currency || 'NGN', certificate_enabled: c.certificate_enabled ?? true,
-        what_you_learn: c.what_you_learn?.length ? c.what_you_learn : [''],
-        requirements: c.requirements?.length ? c.requirements : [''],
-        tags: Array.isArray(c.tags) ? c.tags.join(', ') : '',
-      })
-    }
-    if (modsRes.data?.length) {
-      setModules(modsRes.data.map((m: any, mi: number) => ({
-        id: m.id, title: m.title, position: mi,
-        prerequisite_module_index: null,
-        lessons: m.lessons?.length ? m.lessons.map((l: any) => ({
-          id: l.id, title: l.title || '', type: l.type || 'video',
-          video_url: l.video_url || '', external_url: l.external_url || '',
-          content: l.content || '', file_url: l.file_url || '',
-          file_name: l.file_name || '', is_preview: l.is_preview || false,
-          video_duration: l.video_duration || 0,
-        })) : [{ id: null, title: '', type: 'video', video_url: '', external_url: '', content: '', file_url: '', file_name: '', is_preview: false, video_duration: 0 }]
-      })))
+    setSaving(true) // use saving as loading indicator
+    try {
+      const [courseRes, modsRes] = await Promise.all([
+        fetch(`/api/instructor/courses/${courseId}`).then(r => r.json()),
+        fetch(`/api/instructor/courses/${courseId}/modules`).then(r => r.json()),
+      ])
+      if (courseRes.data) {
+        const c = courseRes.data
+        setInfo({
+          title: c.title || '', slug: c.slug || '', short_description: c.short_description || '',
+          description: c.description || '', category_id: c.category_id || '',
+          difficulty: c.difficulty || 'beginner', duration_weeks: Number(c.duration_weeks) || 12,
+          price: Number(c.price) || 0, currency: c.currency || 'NGN',
+          certificate_enabled: c.certificate_enabled ?? true,
+          what_you_learn: Array.isArray(c.what_you_learn) && c.what_you_learn.length ? c.what_you_learn : [''],
+          requirements: Array.isArray(c.requirements) && c.requirements.length ? c.requirements : [''],
+          tags: Array.isArray(c.tags) ? c.tags.join(', ') : (c.tags || ''),
+        })
+      }
+      // Always reset modules — even if empty
+      const blankLesson = { id: null as string | null, title: '', type: 'video', video_url: '', external_url: '', content: '', file_url: '', file_name: '', is_preview: false, video_duration: 0 }
+      if (modsRes.data?.length) {
+        setModules(modsRes.data.map((m: any, mi: number) => ({
+          id: m.id, title: m.title || `Module ${mi + 1}`, position: mi,
+          prerequisite_module_index: null,
+          lessons: m.lessons?.length ? m.lessons.map((l: any) => ({
+            id: l.id || null, title: l.title || '', type: l.type || 'video',
+            video_url: l.video_url || '', external_url: l.external_url || '',
+            content: l.content || '', file_url: l.file_url || '',
+            file_name: l.file_name || '', is_preview: Boolean(l.is_preview),
+            video_duration: Number(l.video_duration) || 0,
+          })) : [{ ...blankLesson }]
+        })))
+      } else {
+        setModules([{ id: null, title: 'Module 1: Introduction', position: 0, prerequisite_module_index: null, lessons: [{ ...blankLesson }] }])
+      }
+      setExpandedModules(new Set([0]))
+    } catch (err) {
+      console.error('Failed to load course:', err)
+      alert('Failed to load course. Please try again.')
+    } finally {
+      setSaving(false)
     }
     setTab('info')
   }
@@ -107,9 +121,11 @@ export default function CourseBuilderPage() {
     setTab('info')
   }
 
+
   async function saveCourse(publish = false) {
+    if (!info.title) { alert('Please enter a course title'); return }
     setSaving(true)
-    const tags = info.tags.split(',').map(t => t.trim()).filter(Boolean)
+    const tags = info.tags.split(',').map((t: string) => t.trim()).filter(Boolean)
     const body = {
       ...info, tags,
       requirements: info.requirements.filter(Boolean),
@@ -118,22 +134,30 @@ export default function CourseBuilderPage() {
       modules,
       ...(selectedCourseId ? { id: selectedCourseId } : {}),
     }
-    const res = await fetch('/api/admin/course-builder', {
-      method: selectedCourseId ? 'PUT' : 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    }).then(r => r.json())
-    setSaving(false)
-    if (res.data) {
-      setSelectedCourseId(res.data.id)
-      const crs = await fetch('/api/admin/course-builder').then(r => r.json())
-      setCourses(crs.data || [])
-      if (publish) router.push('/admin/courses')
-      else alert('Saved!')
+    try {
+      const res = await fetch('/api/admin/course-builder', {
+        method: selectedCourseId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then(r => r.json())
+
+      if (res.error) { alert('Save failed: ' + res.error); setSaving(false); return }
+
+      if (res.data) {
+        const newId = res.data.id
+        setSelectedCourseId(newId)
+        const crs = await fetch('/api/admin/course-builder').then(r => r.json())
+        setCourses(crs.data || [])
+        if (publish) { router.push('/admin/courses'); return }
+        // Reload so lesson IDs are populated (needed for quiz builder)
+        await loadCourse(newId)
+      }
+    } catch (err) {
+      alert('Save failed. Please check your connection and try again.')
     }
+    setSaving(false)
   }
 
-  // File upload handler
   async function handleFileUpload(mi: number, li: number, file: File) {
     const key = `${mi}-${li}`
     setUploadingLesson(key)
@@ -222,6 +246,16 @@ export default function CourseBuilderPage() {
             ))}
           </div>
 
+          {saveError && (
+            <div className="flex items-center gap-2 bg-red-50 text-red-700 text-sm px-4 py-3 rounded-xl border border-red-100 mb-4">
+              <span className="font-medium">Save failed:</span> {saveError}
+            </div>
+          )}
+          {saveSuccess && (
+            <div className="flex items-center gap-2 bg-green-50 text-green-700 text-sm px-4 py-3 rounded-xl border border-green-100 mb-4">
+              ✓ Course saved successfully!
+            </div>
+          )}
           {tab === 'info' && (
             <div className="bg-white rounded-2xl border border-gray-100 p-6 space-y-5">
               <div className="grid sm:grid-cols-2 gap-5">
