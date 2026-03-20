@@ -143,7 +143,7 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: {
                     </span>
                   </td>
                   <td className="px-5 py-3.5">
-                    <AdminUserActions userId={u.id} currentRole={u.role} isActive={u.is_active} />
+                    <AdminUserActions userId={u.id} currentRole={u.role} isActive={u.is_active} userName={u.full_name} />
                   </td>
                 </tr>
               ))}

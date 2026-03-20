@@ -49,7 +49,7 @@ export default async function AdminCoursesPage({ searchParams }: { searchParams:
                 <td className="px-5 py-4 text-sm">{c.total_students}</td>
                 <td className="px-5 py-4">{Number(c.average_rating) > 0 ? <span className="flex items-center gap-1 text-sm"><Star className="w-3.5 h-3.5 fill-yellow-400 text-yellow-400" />{Number(c.average_rating).toFixed(1)}</span> : <span className="text-xs text-gray-400">—</span>}</td>
                 <td className="px-5 py-4 text-sm font-medium">{Number(c.price) === 0 ? 'Free' : formatCurrency(Number(c.price), c.currency)}</td>
-                <td className="px-5 py-4"><AdminCourseActions courseId={c.id} currentStatus={c.status} slug={c.slug} /></td>
+                <td className="px-5 py-4"><AdminCourseActions courseId={c.id} courseTitle={c.title} currentStatus={c.status} slug={c.slug} /></td>
               </tr>
             ))}
           </tbody>
