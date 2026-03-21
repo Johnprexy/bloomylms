@@ -1,6 +1,6 @@
 'use client'
-
 import { useState, useEffect } from 'react'
+import ConfirmDialog from '@/components/ui/ConfirmDialog'
 import { Users, Calendar, Plus, CheckCircle, XCircle, Loader2, Trash2, UserPlus, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react'
 
 export default function AdminCohortsPage() {
@@ -13,6 +13,7 @@ export default function AdminCohortsPage() {
   const [expandedCohort, setExpandedCohort] = useState<string | null>(null)
   const [form, setForm] = useState({ name: '', course_id: '', start_date: '', end_date: '', max_students: 50 })
   const [success, setSuccess] = useState('')
+  const [deleteTarget, setDeleteTarget] = useState<{ id: string; name: string } | null>(null)
 
   useEffect(() => {
     fetch('/api/admin/cohorts-full').then(r => r.json()).then(d => {
@@ -61,10 +62,11 @@ export default function AdminCohortsPage() {
     setCohorts(d.cohorts || [])
   }
 
-  async function deleteCohort(cohortId: string, cohortName: string) {
-    if (!confirm(`Delete cohort "${cohortName}"?\n\nThis will remove all students from this cohort. Enrollments will remain.`)) return
-    await fetch(`/api/admin/cohorts-full?id=${cohortId}`, { method: 'DELETE' })
-    setCohorts(prev => prev.filter(c => c.id !== cohortId))
+  async function confirmDeleteCohort() {
+    if (!deleteTarget) return
+    await fetch(`/api/admin/cohorts-full?id=${deleteTarget.id}`, { method: 'DELETE' })
+    setCohorts(prev => prev.filter(c => c.id !== deleteTarget.id))
+    setDeleteTarget(null)
   }
 
   const inp = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-bloomy-500'
@@ -146,7 +148,7 @@ export default function AdminCohortsPage() {
                   <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${cohort.is_open ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                     {cohort.is_open ? 'Open' : 'Closed'}
                   </span>
-                  <button onClick={e => { e.stopPropagation(); deleteCohort(cohort.id, cohort.name) }}
+                  <button onClick={e => { e.stopPropagation(); setDeleteTarget({ id: cohort.id, name: cohort.name }) }}
                     className="text-gray-300 hover:text-red-500 p-1 rounded hover:bg-red-50 transition-colors">
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -201,6 +203,18 @@ export default function AdminCohortsPage() {
             </div>
           ))}
         </div>
+      )}
+      {deleteTarget && (
+        <ConfirmDialog
+          title="Delete Cohort"
+          message={`This will permanently delete the cohort "${deleteTarget.name}" and remove all students from it. Course enrollments will not be affected.`}
+          confirmLabel="Delete Cohort"
+          confirmText={deleteTarget.name}
+          confirmPlaceholder={`Type "${deleteTarget.name}" to confirm`}
+          destructive
+          onConfirm={confirmDeleteCohort}
+          onCancel={() => setDeleteTarget(null)}
+        />
       )}
     </div>
   )
