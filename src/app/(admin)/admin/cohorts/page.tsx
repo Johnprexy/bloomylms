@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { Users, Calendar, Plus, CheckCircle, XCircle, Loader2, Trash2, UserPlus, ChevronDown, ChevronRight } from 'lucide-react'
+import { Users, Calendar, Plus, CheckCircle, XCircle, Loader2, Trash2, UserPlus, ChevronDown, ChevronRight, AlertTriangle } from 'lucide-react'
 
 export default function AdminCohortsPage() {
   const [courses, setCourses] = useState<any[]>([])
@@ -59,6 +59,12 @@ export default function AdminCohortsPage() {
     })
     const d = await fetch('/api/admin/cohorts-full').then(r => r.json())
     setCohorts(d.cohorts || [])
+  }
+
+  async function deleteCohort(cohortId: string, cohortName: string) {
+    if (!confirm(`Delete cohort "${cohortName}"?\n\nThis will remove all students from this cohort. Enrollments will remain.`)) return
+    await fetch(`/api/admin/cohorts-full?id=${cohortId}`, { method: 'DELETE' })
+    setCohorts(prev => prev.filter(c => c.id !== cohortId))
   }
 
   const inp = 'w-full px-3 py-2.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-bloomy-500'
@@ -140,6 +146,10 @@ export default function AdminCohortsPage() {
                   <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${cohort.is_open ? 'bg-green-50 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
                     {cohort.is_open ? 'Open' : 'Closed'}
                   </span>
+                  <button onClick={e => { e.stopPropagation(); deleteCohort(cohort.id, cohort.name) }}
+                    className="text-gray-300 hover:text-red-500 p-1 rounded hover:bg-red-50 transition-colors">
+                    <Trash2 className="w-4 h-4" />
+                  </button>
                   {expandedCohort === cohort.id ? <ChevronDown className="w-4 h-4 text-gray-400" /> : <ChevronRight className="w-4 h-4 text-gray-400" />}
                 </div>
               </div>

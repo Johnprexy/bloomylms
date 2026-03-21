@@ -61,3 +61,14 @@ export async function PATCH(request: NextRequest) {
   }
   return NextResponse.json({ success: true })
 }
+
+export async function DELETE(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user || !isAdmin((session.user as any).role)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  await sql`DELETE FROM cohort_students WHERE cohort_id = ${id}`
+  await sql`DELETE FROM cohorts WHERE id = ${id}`
+  return NextResponse.json({ success: true })
+}
