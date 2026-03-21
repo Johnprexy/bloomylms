@@ -457,30 +457,48 @@ export default function CourseBuilderPage() {
                                 )}
                                 {/* QUIZ */}
                                 {lesson.type === 'quiz' && (
-                                  <div className="flex items-center justify-between p-2.5 bg-purple-50 rounded-lg mt-2">
-                                    <p className="text-xs text-purple-700">
-                                      {lesson.id ? 'Quiz saved — click to edit questions' : 'Save course first, then build quiz questions'}
-                                    </p>
-                                    {lesson.id ? (
-                                      <button type="button"
-                                        onClick={() => setQuizLesson({ id: lesson.id!, title: lesson.title || 'Quiz' })}
-                                        className="text-xs bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 font-medium flex items-center gap-1">
-                                        <HelpCircle className="w-3.5 h-3.5" />Build Quiz
-                                      </button>
-                                    ) : (
-                                      <button onClick={() => saveCourse(false)}
-                                        className="text-xs bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 font-medium">
-                                        Save First
-                                      </button>
+                                  <div className="mt-2 bg-purple-50 border border-purple-100 rounded-xl p-3 space-y-2">
+                                    <div className="flex items-center justify-between">
+                                      <p className="text-xs font-semibold text-purple-700 flex items-center gap-1.5">
+                                        <HelpCircle className="w-3.5 h-3.5" />Quiz Questions
+                                      </p>
+                                      {lesson.id ? (
+                                        <button type="button"
+                                          onClick={() => setQuizLesson({ id: lesson.id!, title: lesson.title || 'Quiz' })}
+                                          className="text-xs bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 font-semibold flex items-center gap-1">
+                                          <HelpCircle className="w-3 h-3" />Build / Edit Quiz
+                                        </button>
+                                      ) : (
+                                        <button type="button" onClick={() => saveCourse(false)}
+                                          className="text-xs bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 font-semibold flex items-center gap-1.5">
+                                          <Save className="w-3 h-3" />Save course first
+                                        </button>
+                                      )}
+                                    </div>
+                                    {!lesson.id && (
+                                      <p className="text-xs text-purple-500">Enter a title above, save the course, then click "Build / Edit Quiz" to add questions.</p>
+                                    )}
+                                    {lesson.id && (
+                                      <p className="text-xs text-purple-500">Click "Build / Edit Quiz" to add/edit questions, set pass score, time limit and view results.</p>
                                     )}
                                   </div>
                                 )}
                                 {/* SURVEY */}
                                 {lesson.type === 'survey' && (
-                                  <div className="space-y-2 pt-2">
-                                    <input value={lesson.external_url || ''} onChange={e => updLesson(mi, li, 'external_url', e.target.value)}
-                                      className="w-full text-xs border border-purple-200 rounded-lg px-3 py-1.5 focus:outline-none bg-purple-50"
-                                      placeholder="Optional: paste survey link (Google Forms, Typeform, etc.)" />
+                                  <div className="mt-2 bg-blue-50 border border-blue-100 rounded-xl p-3 space-y-2">
+                                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                                      <p className="text-xs font-semibold text-blue-700 flex items-center gap-1.5">
+                                        <MessageSquare className="w-3.5 h-3.5" />Survey / Feedback Form
+                                      </p>
+                                      <a href="/admin/surveys" target="_blank"
+                                        className="text-xs bg-blue-600 text-white px-3 py-1.5 rounded-lg hover:bg-blue-700 font-semibold flex items-center gap-1">
+                                        <MessageSquare className="w-3 h-3" />Create Survey →
+                                      </a>
+                                    </div>
+                                    <p className="text-xs text-blue-600">Go to <strong>Admin → Surveys & Polls</strong> to create a survey, then paste its link below:</p>
+                                    <input value={lesson.content || ''} onChange={e => updLesson(mi, li, 'content', e.target.value)}
+                                      className="w-full text-xs border border-blue-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-blue-400 bg-white"
+                                      placeholder="Paste survey URL (Google Forms, Typeform, or Surveys & Polls link)..." />
                                   </div>
                                 )}
                               </div>
