@@ -11,7 +11,7 @@ export async function GET() {
   if (!session?.user || !isAdmin((session.user as any).role)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
   const [courses, rawCohorts, students] = await Promise.all([
-    sql`SELECT id, title FROM courses WHERE status = 'published' ORDER BY title`,
+    sql`SELECT id, title FROM courses WHERE status != 'archived' ORDER BY title`,
     sql`
       SELECT co.*, c.title as course_title,
         (SELECT COUNT(*) FROM cohort_students cs WHERE cs.cohort_id = co.id) as student_count
