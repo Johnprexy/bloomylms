@@ -36,6 +36,7 @@ export default function CourseBuilderPage() {
   const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set([0]))
   const [uploadingLesson, setUploadingLesson] = useState<string | null>(null)
   const [quizLesson, setQuizLesson] = useState<{ id: string | null; title: string; tempKey: string } | null>(null)
+  const [saveSuccess, setSaveSuccess] = useState(false)
   const [savedLessonIds, setSavedLessonIds] = useState<Record<string, string>>({})
 
   const [info, setInfo] = useState({
@@ -68,7 +69,7 @@ export default function CourseBuilderPage() {
     })
   }, [])
 
-  async function loadCourse(courseId: string) {
+  async function loadCourse(courseId: string, keepTab = false) {
     setSelectedCourseId(courseId)
     setSaving(true) // use saving as loading indicator
     try {
@@ -113,7 +114,8 @@ export default function CourseBuilderPage() {
     } finally {
       setSaving(false)
     }
-    setTab('info')
+    // Only set tab on initial load, not when reloading after save
+    if (!keepTab) setTab('info')
   }
 
   function newCourse() {
@@ -152,7 +154,12 @@ export default function CourseBuilderPage() {
         setCourses(crs.data || [])
         if (publish) { router.push('/admin/courses'); return }
         // Reload so lesson IDs are populated (needed for quiz builder)
-        await loadCourse(newId)
+        // Pass keepTab=true so we stay on curriculum tab
+        const currentTab = tab
+        await loadCourse(newId, true)
+        setTab(currentTab)
+        setSaveSuccess(true)
+        setTimeout(() => setSaveSuccess(false), 3000)
       }
     } catch (err) {
       alert('Save failed. Please check your connection and try again.')
@@ -211,6 +218,7 @@ export default function CourseBuilderPage() {
         {tab !== 'select' && (
           <div className="flex items-center gap-2 flex-wrap">
             <button onClick={() => setTab('select')} className="btn-secondary text-sm flex items-center gap-1.5"><BookOpen className="w-3.5 h-3.5" />All Courses</button>
+            {saveSuccess && <span className="text-sm text-green-600 font-medium flex items-center gap-1.5">✓ Saved!</span>}
             <button onClick={() => saveCourse(false)} disabled={saving} className="btn-secondary text-sm flex items-center gap-1.5">{saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}Save Draft</button>
             <button onClick={() => saveCourse(true)} disabled={saving} className="btn-primary text-sm flex items-center gap-1.5"><Globe className="w-3.5 h-3.5" />Publish</button>
           </div>
