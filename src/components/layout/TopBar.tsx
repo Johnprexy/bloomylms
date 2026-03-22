@@ -49,7 +49,7 @@ export default function TopBar({ profile }: { profile: any }) {
         {/* Logo — mobile only */}
         <div className="lg:hidden flex items-center gap-2 flex-1">
           <div className="w-7 h-7 bloomy-gradient rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-xs">B</span>
+            <img src="/bloomy-logo.jpg" alt="Bloomy" className="w-full h-full object-cover rounded-lg" />
           </div>
           <span className="font-bold text-gray-900 text-sm">BloomyLMS</span>
         </div>

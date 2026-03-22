@@ -6,7 +6,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       <div className="p-6">
         <Link href="/" className="flex items-center gap-2 w-fit">
           <div className="w-8 h-8 bloomy-gradient rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">B</span>
+            <img src="/bloomy-logo.jpg" alt="Bloomy" className="w-full h-full object-cover rounded-lg" />
           </div>
           <span className="font-bold text-gray-900">BloomyLMS</span>
         </Link>

@@ -31,7 +31,7 @@ export default async function CertificateVerifyPage({ params }: { params: { numb
               <Shield className="w-6 h-6 text-green-400 ml-auto" />
             </div>
             <div className="flex items-center justify-between pt-4 border-t border-gray-100">
-              <Link href="/" className="flex items-center gap-2 text-sm text-gray-500"><div className="w-6 h-6 bloomy-gradient rounded flex items-center justify-center"><span className="text-white font-bold text-xs">B</span></div>bloomy360.com</Link>
+              <Link href="/" className="flex items-center gap-2 text-sm text-gray-500"><img src="/bloomy-logo.jpg" alt="Bloomy" className="w-6 h-6 object-cover rounded" />bloomy360.com</Link>
               <p className="text-xs text-gray-400">ID: {cert.certificate_number}</p>
             </div>
           </div>

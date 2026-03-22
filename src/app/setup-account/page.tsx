@@ -92,7 +92,7 @@ function SetupForm() {
       <div className="bg-white rounded-2xl shadow-xl border border-gray-100 p-8">
         <div className="text-center mb-8">
           <div className="w-14 h-14 bloomy-gradient rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-md">
-            <span className="text-white font-bold text-xl">B</span>
+            <img src="/bloomy-logo.jpg" alt="Bloomy" className="w-full h-full object-cover rounded-xl" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Activate Your Account</h1>
           <p className="text-gray-500 text-sm">Set your password to access BloomyLMS</p>
@@ -152,7 +152,7 @@ export default function SetupAccountPage() {
     <div className="min-h-screen bg-gradient-to-br from-bloomy-50 via-white to-blue-50 flex flex-col">
       <div className="p-6">
         <Link href="/" className="flex items-center gap-2 w-fit">
-          <div className="w-8 h-8 bloomy-gradient rounded-lg flex items-center justify-center"><span className="text-white font-bold text-sm">B</span></div>
+          <img src="/bloomy-logo.jpg" alt="Bloomy" className="w-8 h-8 object-cover rounded-lg" />
           <span className="font-bold text-gray-900">BloomyLMS</span>
         </Link>
       </div>

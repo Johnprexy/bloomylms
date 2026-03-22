@@ -65,7 +65,7 @@ function LoginForm() {
         {/* Header */}
         <div className="text-center mb-8">
           <div className="w-14 h-14 bloomy-gradient rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-md">
-            <span className="text-white font-bold text-xl">B</span>
+            <img src="/bloomy-logo.jpg" alt="Bloomy" className="w-full h-full object-cover rounded-xl" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-1">Sign in to BloomyLMS</h1>
           <p className="text-gray-500 text-sm">Enter your credentials to access your portal</p>

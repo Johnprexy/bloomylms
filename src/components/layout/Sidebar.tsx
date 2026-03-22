@@ -109,9 +109,7 @@ export default function Sidebar() {
     <>
       <div className="flex items-center justify-between p-4 border-b border-gray-100 flex-shrink-0">
         <Link href="/dashboard" onClick={onNavigate} className="flex items-center gap-2.5">
-          <div className="w-8 h-8 bloomy-gradient rounded-lg flex items-center justify-center">
-            <span className="text-white font-bold text-sm">B</span>
-          </div>
+          <img src="/bloomy-logo.jpg" alt="Bloomy" className="w-8 h-8 rounded-lg object-cover" />
           <div>
             <p className="font-bold text-gray-900 text-sm leading-none">BloomyLMS</p>
             <p className="text-xs text-gray-400 leading-none mt-0.5">Bloomy Technologies</p>

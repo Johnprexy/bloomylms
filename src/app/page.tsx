@@ -47,9 +47,7 @@ export default function HomePage() {
       <nav style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 50, background: 'rgba(10,10,15,0.9)', backdropFilter: 'blur(20px)', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
         <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px', height: 64, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <div style={{ width: 36, height: 36, borderRadius: 10, background: 'linear-gradient(135deg,#6C3DFF,#3a5eff)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              <span style={{ color: 'white', fontWeight: 800, fontSize: 15, fontFamily: 'Syne, system-ui' }}>B</span>
-            </div>
+            <img src="/bloomy-logo.jpg" alt="Bloomy" style={{ width: 36, height: 36, borderRadius: 10, objectFit: 'cover' }} />
             <div>
               <p style={{ fontWeight: 700, color: 'white', fontSize: 14, margin: 0, fontFamily: 'Syne, system-ui' }}>BloomyLMS</p>
               <p style={{ color: 'rgba(255,255,255,0.35)', fontSize: 11, margin: 0 }}>Bloomy Technologies</p>
