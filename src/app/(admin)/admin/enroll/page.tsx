@@ -16,6 +16,8 @@ export default function EnrollPage() {
   // Single
   const [email, setEmail] = useState('')
   const [name, setName] = useState('')
+  const [phone, setPhone] = useState('')
+  const [cohortId, setCohortId] = useState('')
   const [courseId, setCourseId] = useState('')
 
   // Bulk table
@@ -40,7 +42,7 @@ export default function EnrollPage() {
     })
   }, [])
 
-  async function enroll(rows: { email: string; full_name?: string; course_id: string }[]) {
+  async function enroll(rows: { email: string; full_name?: string; phone?: string; cohort_id?: string; course_id: string }[]) {
     const valid = rows.filter(r => r.email?.trim() && r.course_id)
     if (!valid.length) { setErrorMsg('Fill in email and select a course'); return }
     setSending(true)
@@ -57,7 +59,7 @@ export default function EnrollPage() {
       if (res.error) { setErrorMsg(res.error); return }
       setResults(res.data?.results || [])
       // Reset form
-      setEmail(''); setName(''); setCourseId('')
+      setEmail(''); setName(''); setPhone(''); setCohortId(''); setCourseId('')
       setBulkRows([{ email: '', full_name: '', phone: '', cohort_id: '', course_id: '' }])
       setBulkText('')
       // Refresh invitations
@@ -73,7 +75,7 @@ export default function EnrollPage() {
     const lines = bulkText.trim().split('\n').filter(Boolean)
     return lines.map(line => {
       const parts = line.split(',').map(s => s.trim())
-      return { email: parts[0]?.toLowerCase() || '', full_name: parts[1] || '', phone: parts[2] || '', cohort_id: parts[3] || '', course_id: parts[4] || courseId || '' }
+      return { email: parts[0]?.toLowerCase() || '', full_name: parts[1] || '', phone: parts[2] || '', cohort_id: parts[3] || cohortId || '', course_id: parts[4] || courseId || '' }
     }).filter(r => r.email)
   }
 
@@ -144,31 +146,43 @@ export default function EnrollPage() {
           {/* SINGLE */}
           {tab === 'single' && (
             <div className="space-y-4 max-w-lg">
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Student Email *</label>
-                <input value={email} onChange={e => setEmail(e.target.value)} className={inp}
-                  placeholder="student@email.com" type="email"
-                  onKeyDown={e => e.key === 'Enter' && enroll([{ email, full_name: name, course_id: courseId }])} />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Name</label>
-                <input value={name} onChange={e => setName(e.target.value)} className={inp} placeholder="John Doe" />
-              </div>
-              <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-1.5">Course *</label>
-                <select value={courseId} onChange={e => setCourseId(e.target.value)} className={inp + ' appearance-none cursor-pointer'}>
-                  <option value="">Select course...</option>
-                  {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
-                </select>
+              <div className="grid sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Student Email *</label>
+                  <input value={email} onChange={e => setEmail(e.target.value)} className={inp}
+                    placeholder="student@email.com" type="email" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Full Name</label>
+                  <input value={name} onChange={e => setName(e.target.value)} className={inp} placeholder="John Doe" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Phone</label>
+                  <input value={phone} onChange={e => setPhone(e.target.value)} className={inp} placeholder="+234 801 234 5678" />
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Cohort</label>
+                  <select value={cohortId} onChange={e => setCohortId(e.target.value)} className={inp + ' appearance-none cursor-pointer'}>
+                    <option value="">No cohort</option>
+                    {cohorts.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">Course *</label>
+                  <select value={courseId} onChange={e => setCourseId(e.target.value)} className={inp + ' appearance-none cursor-pointer'}>
+                    <option value="">Select course...</option>
+                    {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
+                  </select>
+                </div>
               </div>
               <div className="bg-blue-50 border border-blue-100 rounded-xl px-4 py-3 text-sm text-blue-700 flex items-start gap-2">
                 <AlertCircle className="w-4 h-4 mt-0.5 flex-shrink-0" />
                 <div>
-                  <strong>How it works:</strong> If the student already has an account, they're enrolled immediately.
-                  If not, a new account is created with a temporary password — you'll see it in the results below to share with them.
+                  <strong>How it works:</strong> Existing accounts are enrolled immediately.
+                  New students get an account with a temporary password shown in the results below.
                 </div>
               </div>
-              <button onClick={() => enroll([{ email, full_name: name, course_id: courseId }])}
+              <button onClick={() => enroll([{ email, full_name: name, phone, cohort_id: cohortId, course_id: courseId }])}
                 disabled={sending || !email || !courseId}
                 className="btn-primary flex items-center gap-2 text-sm w-full justify-center py-3 disabled:opacity-50 disabled:cursor-not-allowed">
                 {sending ? <><Loader2 className="w-4 h-4 animate-spin" />Enrolling...</> : <><UserPlus className="w-4 h-4" />Enroll Student</>}
@@ -256,7 +270,11 @@ export default function EnrollPage() {
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Paste CSV Data</label>
                 <p className="text-xs text-gray-400 mb-2">Format: <code className="bg-gray-100 px-1.5 py-0.5 rounded font-mono">email, full name, phone, cohort_id, course_id</code> — one per line.</p>
-                <div className="mb-2">
+                <div className="grid sm:grid-cols-2 gap-2 mb-2">
+                  <select value={cohortId} onChange={e => setCohortId(e.target.value)} className={inp + ' appearance-none'}>
+                    <option value="">Default cohort (optional)...</option>
+                    {cohorts.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
                   <select value={courseId} onChange={e => setCourseId(e.target.value)} className={inp + ' appearance-none'}>
                     <option value="">Default course (optional)...</option>
                     {courses.map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
@@ -355,7 +373,7 @@ export default function EnrollPage() {
           <div className="overflow-x-auto">
             <table className="w-full min-w-[600px]">
               <thead><tr className="border-b border-gray-100 bg-gray-50">
-                {['Student', 'Course', 'Status', 'Date', ''].map(h => (
+                {['Student', 'Phone', 'Course', 'Cohort', 'Status', 'Date', ''].map(h => (
                   <th key={h} className="text-left text-xs font-semibold text-gray-500 px-4 py-3">{h}</th>
                 ))}
               </tr></thead>
@@ -366,7 +384,9 @@ export default function EnrollPage() {
                       <p className="text-sm font-semibold text-gray-900">{inv.full_name || '—'}</p>
                       <p className="text-xs text-gray-400">{inv.email}</p>
                     </td>
-                    <td className="px-4 py-3 text-sm text-gray-700 max-w-48 truncate">{inv.course_title || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">{inv.token || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-700 max-w-40 truncate">{inv.course_title || '—'}</td>
+                    <td className="px-4 py-3 text-sm text-gray-500">—</td>
                     <td className="px-4 py-3">
                       <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${
                         inv.status === 'accepted' ? 'bg-green-50 text-green-700' :
