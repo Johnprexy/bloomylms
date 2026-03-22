@@ -5,6 +5,7 @@ import { UserPlus, Upload, CheckCircle, Loader2, X, AlertCircle, Mail, Users, Cl
 
 export default function EnrollPage() {
   const [courses, setCourses] = useState<any[]>([])
+  const [cohorts, setCohorts] = useState<any[]>([])
   const [invitations, setInvitations] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [sending, setSending] = useState(false)
@@ -18,7 +19,7 @@ export default function EnrollPage() {
   const [courseId, setCourseId] = useState('')
 
   // Bulk table
-  const [bulkRows, setBulkRows] = useState([{ email: '', full_name: '', course_id: '' }])
+  const [bulkRows, setBulkRows] = useState([{ email: '', full_name: '', phone: '', cohort_id: '', course_id: '' }])
 
   // Bulk CSV paste
   const [bulkText, setBulkText] = useState('')
@@ -30,9 +31,11 @@ export default function EnrollPage() {
     Promise.all([
       fetch('/api/admin/course-builder').then(r => r.json()),
       fetch('/api/admin/invitations').then(r => r.json()),
-    ]).then(([crs, inv]) => {
+      fetch('/api/admin/cohorts-full').then(r => r.json()).catch(() => ({ cohorts: [] })),
+    ]).then(([crs, inv, coh]) => {
       setCourses(crs.data || [])
       setInvitations(inv.data || [])
+      setCohorts(coh.cohorts || [])
       setLoading(false)
     })
   }, [])
@@ -55,7 +58,7 @@ export default function EnrollPage() {
       setResults(res.data?.results || [])
       // Reset form
       setEmail(''); setName(''); setCourseId('')
-      setBulkRows([{ email: '', full_name: '', course_id: '' }])
+      setBulkRows([{ email: '', full_name: '', phone: '', cohort_id: '', course_id: '' }])
       setBulkText('')
       // Refresh invitations
       const inv = await fetch('/api/admin/invitations').then(r => r.json())
@@ -70,7 +73,7 @@ export default function EnrollPage() {
     const lines = bulkText.trim().split('\n').filter(Boolean)
     return lines.map(line => {
       const parts = line.split(',').map(s => s.trim())
-      return { email: parts[0]?.toLowerCase() || '', full_name: parts[1] || '', course_id: parts[2] || courseId || '' }
+      return { email: parts[0]?.toLowerCase() || '', full_name: parts[1] || '', phone: parts[2] || '', cohort_id: parts[3] || '', course_id: parts[4] || courseId || '' }
     }).filter(r => r.email)
   }
 
@@ -80,8 +83,8 @@ export default function EnrollPage() {
       const text = e.target?.result as string
       const lines = text.trim().split('\n').slice(1)
       const parsed = lines.map(line => {
-        const [em, fn, cid] = line.split(',').map(s => s.replace(/"/g, '').trim())
-        return { email: em?.toLowerCase() || '', full_name: fn || '', course_id: cid || courseId || '' }
+        const [em, fn, phone, cohort_id, cid] = line.split(',').map(s => s.replace(/"/g, '').trim())
+        return { email: em?.toLowerCase() || '', full_name: fn || '', phone: phone || '', cohort_id: cohort_id || '', course_id: cid || courseId || '' }
       }).filter(r => r.email)
       if (parsed.length) { setBulkRows(parsed); setTab('bulk') }
     }
@@ -183,7 +186,7 @@ export default function EnrollPage() {
                     <Upload className="w-3.5 h-3.5" />Upload CSV
                     <input type="file" accept=".csv" ref={fileRef} className="hidden" onChange={e => e.target.files?.[0] && parseCSVFile(e.target.files[0])} />
                   </label>
-                  <button onClick={() => setBulkRows(r => [...r, { email: '', full_name: '', course_id: '' }])}
+                  <button onClick={() => setBulkRows(r => [...r, { email: '', full_name: '', phone: '', cohort_id: '', course_id: '' }])}
                     className="btn-secondary text-sm py-1.5 flex items-center gap-1.5">
                     <Plus className="w-3.5 h-3.5" />Add Row
                   </button>
@@ -192,7 +195,7 @@ export default function EnrollPage() {
               <div className="border border-gray-200 rounded-xl overflow-hidden">
                 <table className="w-full">
                   <thead><tr className="bg-gray-50 border-b border-gray-100">
-                    {['Email *', 'Full Name', 'Course *', ''].map(h => (
+                    {['Email *', 'Full Name', 'Phone', 'Cohort', 'Course *', ''].map(h => (
                       <th key={h} className="text-left text-xs font-semibold text-gray-500 px-3 py-2.5">{h}</th>
                     ))}
                   </tr></thead>
@@ -208,6 +211,18 @@ export default function EnrollPage() {
                           <input value={row.full_name} onChange={e => setBulkRows(rows => rows.map((r, j) => j === i ? { ...r, full_name: e.target.value } : r))}
                             className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-bloomy-500"
                             placeholder="Full name" />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <input value={row.phone || ''} onChange={e => setBulkRows(rows => rows.map((r, j) => j === i ? { ...r, phone: e.target.value } : r))}
+                            className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-bloomy-500"
+                            placeholder="+234..." />
+                        </td>
+                        <td className="px-2 py-1.5">
+                          <select value={row.cohort_id || ''} onChange={e => setBulkRows(rows => rows.map((r, j) => j === i ? { ...r, cohort_id: e.target.value } : r))}
+                            className="w-full px-2.5 py-1.5 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-1 focus:ring-bloomy-500 bg-white">
+                            <option value="">No cohort</option>
+                            {cohorts.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
+                          </select>
                         </td>
                         <td className="px-2 py-1.5">
                           <select value={row.course_id} onChange={e => setBulkRows(rows => rows.map((r, j) => j === i ? { ...r, course_id: e.target.value } : r))}
@@ -240,7 +255,7 @@ export default function EnrollPage() {
             <div className="space-y-3 max-w-2xl">
               <div>
                 <label className="block text-sm font-semibold text-gray-700 mb-1.5">Paste CSV Data</label>
-                <p className="text-xs text-gray-400 mb-2">Format: <code className="bg-gray-100 px-1.5 py-0.5 rounded font-mono">email, full name, course_id</code> — one per line. Course ID is optional if you select one below.</p>
+                <p className="text-xs text-gray-400 mb-2">Format: <code className="bg-gray-100 px-1.5 py-0.5 rounded font-mono">email, full name, phone, cohort_id, course_id</code> — one per line.</p>
                 <div className="mb-2">
                   <select value={courseId} onChange={e => setCourseId(e.target.value)} className={inp + ' appearance-none'}>
                     <option value="">Default course (optional)...</option>

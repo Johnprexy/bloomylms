@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const rows = await request.json() as { email: string; full_name?: string; course_id: string }[]
+  const rows = await request.json() as { email: string; full_name?: string; phone?: string; cohort_id?: string; course_id: string }[]
   if (!rows?.length) return NextResponse.json({ error: 'No data provided' }, { status: 400 })
 
   const results: { email: string; status: string; message: string }[] = []
@@ -74,6 +74,11 @@ export async function POST(request: NextRequest) {
       })
     }
 
+    // Save phone if provided
+    if (row.phone) {
+      await sql`UPDATE users SET phone = ${row.phone} WHERE id = ${userId}`
+    }
+
     // Enroll in course
     await sql`
       INSERT INTO enrollments (student_id, course_id, status)
@@ -81,6 +86,13 @@ export async function POST(request: NextRequest) {
       ON CONFLICT DO NOTHING
     `
     await sql`UPDATE courses SET total_students = COALESCE(total_students,0) + 1 WHERE id = ${row.course_id}`
+
+    // Add to cohort if specified
+    if (row.cohort_id) {
+      try {
+        await sql`INSERT INTO cohort_students (cohort_id, student_id) VALUES (${row.cohort_id}, ${userId}) ON CONFLICT DO NOTHING`
+      } catch (_) {}
+    }
 
     // Try send email (best-effort, won't block on failure)
     try {
