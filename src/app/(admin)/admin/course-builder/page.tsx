@@ -578,16 +578,27 @@ export default function CourseBuilderPage() {
           lessonId={quizLesson.id}
           lessonTitle={quizLesson.title}
           courseId={selectedCourseId || undefined}
-          onClose={() => setQuizLesson(null)}
-          onSaved={() => {
-            const lessonId = quizLesson.id
-            setModules(prev => prev.map(mod => ({
-              ...mod,
-              lessons: mod.lessons.map((l: any) =>
-                l.id === lessonId ? { ...l, hasQuiz: true } as any : l
-              )
-            })))
+          onClose={async () => {
+            // On close, re-fetch all lesson quiz statuses from DB
+            if (selectedCourseId) {
+              const modsRes = await fetch(`/api/instructor/courses/${selectedCourseId}/modules`).then(r => r.json())
+              if (modsRes.data?.length) {
+                setModules(prev => prev.map((mod: any, mi: number) => {
+                  const dbMod = modsRes.data[mi]
+                  if (!dbMod) return mod
+                  return {
+                    ...mod,
+                    lessons: mod.lessons.map((l: any, li: number) => {
+                      const dbLesson = dbMod.lessons?.[li] || dbMod.lessons?.find((dl: any) => dl.id === l.id)
+                      return dbLesson ? { ...l, hasQuiz: !!dbLesson.quiz_id } as any : l
+                    })
+                  }
+                }))
+              }
+            }
+            setQuizLesson(null)
           }}
+          onSaved={() => {}}
         />
       )}
     </div>
