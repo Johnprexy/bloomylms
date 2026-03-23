@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { ChevronLeft, ChevronDown, ChevronRight, CheckCircle, Play, FileText, HelpCircle, Paperclip, Menu, X, BookOpen, Link2, Download, ExternalLink, Upload, Loader2, MessageSquare, Type } from 'lucide-react'
 import { markLessonComplete } from '@/lib/actions/courses'
 import { cn } from '@/lib/utils'
-import QuizComponent from './QuizComponent'
+import QuizTaker from './QuizTaker'
 import FileUpload from '@/components/ui/FileUpload'
 
 interface Props {
@@ -116,18 +116,16 @@ export default function CoursePlayer({ course, modules, enrollment, lessonProgre
 
     // QUIZ
     if (lesson.type === 'quiz') {
-      if (lesson.quiz_id) {
-        return (
-          <QuizComponent quizId={lesson.quiz_id} lessonId={lesson.id} courseId={course.id} userId={userId}
-            onComplete={(passed) => { if (passed) setProgress(prev => ({ ...prev, [lesson.id]: true })) }} />
-        )
-      }
+      // Try new v2 quiz system first (lesson has quiz via quizzes table)
       return (
-        <div className="text-center py-12 text-gray-400">
-          <HelpCircle className="w-10 h-10 mx-auto mb-3 opacity-30" />
-          <p className="font-medium">Quiz not set up yet</p>
-          <p className="text-sm mt-1">Your instructor hasn't added questions yet.</p>
-        </div>
+        <QuizTaker
+          quizId={lesson.quiz_id || lesson.id}
+          courseId={course.id}
+          userId={userId}
+          onComplete={(passed, score) => {
+            if (passed) setProgress(prev => ({ ...prev, [lesson.id]: true }))
+          }}
+        />
       )
     }
 

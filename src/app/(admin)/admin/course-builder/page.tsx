@@ -4,12 +4,13 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   PlusCircle, Trash2, GripVertical, Save, ArrowLeft, Video, FileText,
-  Paperclip, ChevronDown, ChevronRight, Loader2, Globe,
+  HelpCircle, Paperclip, ChevronDown, ChevronRight, Loader2, Globe,
   BookOpen, Link2, Type, AlignLeft, Upload, X, ChevronUp, MessageSquare,
   CheckCircle, AlertCircle
 } from 'lucide-react'
 import Link from 'next/link'
 import FileUpload from '@/components/ui/FileUpload'
+import QuizBuilderV2 from '@/components/admin/QuizBuilderV2'
 import { slugify } from '@/lib/utils'
 
 const LESSON_TYPES = [
@@ -18,6 +19,7 @@ const LESSON_TYPES = [
   { value: 'video',       label: 'Video',       icon: Video },
   { value: 'file',        label: 'File',        icon: FileText },
   { value: 'url',         label: 'URL',         icon: Link2 },
+  { value: 'quiz',        label: 'Quiz',        icon: HelpCircle },
   { value: 'assignment',  label: 'Assignment',  icon: Paperclip },
   { value: 'survey',      label: 'Survey',      icon: MessageSquare },
 ]
@@ -43,6 +45,8 @@ export default function CourseBuilderPage() {
   })
 
   const [modules, setModules] = useState([emptyModule(1)])
+  const [openingQuiz, setOpeningQuiz] = useState<string | null>(null)
+  const [quizLesson, setQuizLesson] = useState<{ id: string; title: string; quizId?: string } | null>(null)
 
   useEffect(() => {
     Promise.all([
@@ -182,76 +186,36 @@ export default function CourseBuilderPage() {
     setSaving(false)
   }
 
-  // ── open quiz builder ──
-
+  // ── open quiz builder v2 ──
   async function openQuizBuilder(mi: number, li: number, lesson: any) {
-    const key = `${mi}-${li}`
+    setOpeningQuiz(`${mi}-${li}`)
     setSaveMsg(null)
-
     try {
-      // If lesson already has a DB id, open directly - no save needed
-      if (lesson.id) {
-        return
-      }
-
-      // No id yet - need to save first
-      if (!info.title?.trim()) {
-        setSaveMsg({ type: 'error', text: 'Enter a course title first' })
-        setTab('info')
-        return
-      }
-
-      const tags = info.tags ? info.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : []
-      const body = {
-        ...info, tags,
-        requirements: (info.requirements || []).filter(Boolean),
-        what_you_learn: (info.what_you_learn || []).filter(Boolean),
-        status: 'draft', modules,
-        ...(selectedCourseId ? { id: selectedCourseId } : {}),
-      }
-
-      const res = await fetch('/api/admin/course-builder', {
-        method: selectedCourseId ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
-      }).then(r => r.json())
-
-      if (res.error || !res.data?.id) {
-        setSaveMsg({ type: 'error', text: 'Save failed: ' + (res.error || 'unknown') })
-        return
-      }
-
-      setSelectedCourseId(res.data.id)
-
-      // Update all lesson IDs from the save response
-      const savedLessons: any[] = res.data.savedLessons || []
-      if (savedLessons.length) {
-        setModules(prev => prev.map((mod, mIdx) => ({
-          ...mod,
-          id: savedLessons.find((sl: any) => sl.module_position === mIdx)?.module_id || mod.id,
-          lessons: mod.lessons.map((l: any, lIdx: number) => {
-            const saved = savedLessons.find((sl: any) =>
-              sl.module_position === mIdx && sl.lesson_position === lIdx
-            )
-            return saved ? { ...l, id: saved.id } : l
-          })
-        })))
-        // Find THIS lesson's id from saved response
-        const thisLesson = savedLessons.find((sl: any) =>
-          sl.module_position === mi && sl.lesson_position === li
-        )
-        if (thisLesson?.id) {
-          return
+      let lessonId = lesson.id
+      if (!lessonId) {
+        if (!info.title?.trim()) {
+          setSaveMsg({ type: 'error', text: 'Enter a course title first' })
+          setTab('info'); setOpeningQuiz(null); return
         }
+        const tags = info.tags ? info.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : []
+        const body = { ...info, tags, requirements: (info.requirements||[]).filter(Boolean), what_you_learn: (info.what_you_learn||[]).filter(Boolean), status: 'draft', modules, ...(selectedCourseId ? { id: selectedCourseId } : {}) }
+        const res = await fetch('/api/admin/course-builder', { method: selectedCourseId ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then(r => r.json())
+        if (res.error || !res.data?.id) { setSaveMsg({ type: 'error', text: 'Save failed: ' + (res.error || 'unknown') }); setOpeningQuiz(null); return }
+        setSelectedCourseId(res.data.id)
+        const saved: any[] = res.data.savedLessons || []
+        setModules(prev => prev.map((mod, mIdx) => ({ ...mod, id: saved.find((sl) => sl.module_position === mIdx)?.module_id || mod.id, lessons: mod.lessons.map((l: any, lIdx: number) => { const sl = saved.find((s) => s.module_position === mIdx && s.lesson_position === lIdx); return sl ? { ...l, id: sl.id } : l }) })))
+        const thisLesson = saved.find((sl) => sl.module_position === mi && sl.lesson_position === li)
+        if (!thisLesson?.id) { setSaveMsg({ type: 'error', text: 'Could not get lesson ID. Try Save Draft first.' }); setOpeningQuiz(null); return }
+        lessonId = thisLesson.id
       }
-
-      setSaveMsg({ type: 'error', text: 'Lesson saved but could not find its ID. Try Save Draft then click Build Quiz.' })
-    } catch (e: any) {
-      setSaveMsg({ type: 'error', text: 'Error: ' + e.message })
-    }
+      const existing = await fetch(`/api/v2/quizzes?lesson_id=${lessonId}`).then(r => r.json())
+      const existingQuiz = Array.isArray(existing.data) ? existing.data[0] : existing.data
+      setQuizLesson({ id: lessonId, title: lesson.title || 'Quiz', quizId: existingQuiz?.id })
+    } catch (e: any) { setSaveMsg({ type: 'error', text: 'Error: ' + e.message }) }
+    setOpeningQuiz(null)
   }
 
-    // ── helpers ──
+  // ── helpers ──
   const upd = (k: string, v: any) => setInfo(f => ({
     ...f, [k]: v,
     ...(k === 'title' && !selectedCourseId ? { slug: slugify(v) } : {})
@@ -516,6 +480,39 @@ export default function CourseBuilderPage() {
                                     placeholder="Topic content..." />
                                 )}
                                 {/* ASSIGNMENT */}
+                                {/* QUIZ */}
+                                {lesson.type === 'quiz' && (() => {
+                                  const hasQuiz = !!(lesson as any).quiz_id
+                                  const qCount = parseInt((lesson as any).quiz_question_count) || 0
+                                  return (
+                                    <div className={`mt-2 rounded-xl border overflow-hidden ${hasQuiz ? 'border-green-200' : 'border-purple-100'}`}>
+                                      <div className={`flex items-center gap-3 px-3 py-2.5 ${hasQuiz ? 'bg-green-50' : 'bg-purple-50'}`}>
+                                        <HelpCircle className={`w-4 h-4 flex-shrink-0 ${hasQuiz ? 'text-green-600' : 'text-purple-500'}`} />
+                                        <div className="flex-1 min-w-0">
+                                          {hasQuiz
+                                            ? <span className="text-xs font-semibold text-green-700">✓ {qCount} question{qCount !== 1 ? 's' : ''} saved</span>
+                                            : <span className="text-xs font-medium text-purple-600">No quiz yet — click Build Quiz</span>}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                                          {hasQuiz && (
+                                            <button type="button"
+                                              onClick={async () => { if (!confirm('Delete this quiz?')) return; await fetch(`/api/v2/quizzes/${(lesson as any).quiz_id}`, { method: 'DELETE' }); updLesson(mi, li, 'quiz_id' as any, null); updLesson(mi, li, 'quiz_question_count' as any, 0) }}
+                                              className="text-xs text-red-400 hover:text-red-600 px-2 py-1.5 rounded-lg hover:bg-red-50 flex items-center gap-1">
+                                              <Trash2 className="w-3.5 h-3.5" />Delete
+                                            </button>
+                                          )}
+                                          <button type="button"
+                                            disabled={openingQuiz === `${mi}-${li}`}
+                                            onClick={() => openQuizBuilder(mi, li, lesson)}
+                                            className={`text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 disabled:opacity-70 ${hasQuiz ? 'bg-bloomy-600 hover:bg-bloomy-700 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}>
+                                            {openingQuiz === `${mi}-${li}` ? <><Loader2 className="w-3 h-3 animate-spin" />Opening...</> : <><HelpCircle className="w-3 h-3" />{hasQuiz ? 'Edit Quiz' : 'Build Quiz'}</>}
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  )
+                                })()}
+                                {/* ASSIGNMENT */}
                                 {lesson.type === 'assignment' && (
                                   <div className="space-y-2 pt-2">
                                     <textarea value={lesson.content} onChange={e => updLesson(mi, li, 'content', e.target.value)}
@@ -562,6 +559,21 @@ export default function CourseBuilderPage() {
       )}
 
 
+
+      {/* QuizBuilder V2 Modal */}
+      {quizLesson && (
+        <QuizBuilderV2
+          quizId={quizLesson.quizId}
+          lessonId={quizLesson.id}
+          courseId={selectedCourseId || undefined}
+          lessonTitle={quizLesson.title}
+          onClose={() => setQuizLesson(null)}
+          onSaved={(data) => {
+            setModules(prev => prev.map(mod => ({ ...mod, lessons: mod.lessons.map((l: any) => l.id === quizLesson.id ? { ...l, quiz_id: data.quiz_id, quiz_question_count: data.question_count, hasQuiz: true } as any : l) })))
+            setQuizLesson(null)
+          }}
+        />
+      )}
     </div>
   )
 }
