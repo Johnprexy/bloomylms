@@ -16,6 +16,7 @@ const studentNav = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/dashboard/my-courses', icon: BookMarked, label: 'My Courses' },
   { href: '/dashboard/labs', icon: FlaskConical, label: 'Labs & Resources' },
+  { href: '/dashboard/my-quizzes', icon: HelpCircle, label: 'My Quizzes' },
   { href: '/dashboard/live-sessions', icon: Video, label: 'Live Sessions' },
   { href: '/dashboard/certificates', icon: Award, label: 'Certificates' },
   { href: '/dashboard/profile', icon: User, label: 'Profile' },

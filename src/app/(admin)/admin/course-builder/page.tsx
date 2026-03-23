@@ -517,19 +517,19 @@ export default function CourseBuilderPage() {
                                 )}
                                 {/* QUIZ */}
                                 {lesson.type === 'quiz' && (
-                                  <div className="mt-2 bg-purple-50 border border-purple-100 rounded-xl p-3">
+                                  <div className={`mt-2 rounded-xl p-3 border ${(lesson as any).hasQuiz || lesson.id ? 'bg-green-50 border-green-200' : 'bg-purple-50 border-purple-100'}`}>
                                     <div className="flex items-center justify-between gap-2">
-                                      <p className="text-xs font-semibold text-purple-700 flex items-center gap-1.5">
+                                      <p className={`text-xs font-semibold flex items-center gap-1.5 ${(lesson as any).hasQuiz || lesson.id ? 'text-green-700' : 'text-purple-700'}`}>
                                         <HelpCircle className="w-3.5 h-3.5" />
-                                        {lesson.id ? '✓ Quiz ready' : 'Quiz Questions'}
+                                        {(lesson as any).hasQuiz ? '✓ Quiz saved — click to edit' : lesson.id ? '✓ Lesson saved — click to build quiz' : 'Click to save & build quiz'}
                                       </p>
                                       <button type="button"
                                         disabled={openingQuiz === `${mi}-${li}`}
                                         onClick={() => openQuizBuilder(mi, li, lesson)}
-                                        className="text-xs bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-semibold flex items-center gap-1.5 shadow-sm disabled:opacity-70">
+                                        className={`text-xs px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 shadow-sm disabled:opacity-70 ${(lesson as any).hasQuiz ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}>
                                         {openingQuiz === `${mi}-${li}`
                                           ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Opening...</>
-                                          : <><HelpCircle className="w-3.5 h-3.5" />Build Quiz</>}
+                                          : <><HelpCircle className="w-3.5 h-3.5" />{(lesson as any).hasQuiz ? 'Edit Quiz' : 'Build Quiz'}</>}
                                       </button>
                                     </div>
                                   </div>
@@ -578,7 +578,15 @@ export default function CourseBuilderPage() {
           lessonTitle={quizLesson.title}
           courseId={selectedCourseId || undefined}
           onClose={() => setQuizLesson(null)}
-          onSaved={() => {}}
+          onSaved={() => {
+            // Mark the lesson as having a saved quiz
+            setModules(prev => prev.map(mod => ({
+              ...mod,
+              lessons: mod.lessons.map((l: any) =>
+                l.id === quizLesson?.id ? { ...l, hasQuiz: true } as any : l
+              )
+            })))
+          }}
         />
       )}
     </div>
