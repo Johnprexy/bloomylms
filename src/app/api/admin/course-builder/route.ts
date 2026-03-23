@@ -7,7 +7,6 @@ import { slugify } from '@/lib/utils'
 
 function isAdmin(role: string) { return role === 'admin' || role === 'super_admin' }
 
-// Map our UI lesson types to valid DB enum values
 function dbType(type: string): string {
   const map: Record<string, string> = {
     'text_header': 'text', 'page': 'text', 'video': 'video',
@@ -32,10 +31,9 @@ export async function GET() {
 async function upsertCourseWithModules(courseId: string | null, userId: string, body: any) {
   const { modules: courseModules, ...courseData } = body
 
-  // Handle slug — ensure unique
+  // Handle slug uniqueness
   let slug = courseData.slug || slugify(courseData.title)
   if (!courseId) {
-    // Check slug exists, add suffix if needed
     const existing = await sql`SELECT id FROM courses WHERE slug = ${slug} LIMIT 1`
     if (existing[0]) slug = `${slug}-${Date.now().toString().slice(-4)}`
   }
@@ -82,58 +80,124 @@ async function upsertCourseWithModules(courseId: string | null, userId: string, 
   const cid = course[0].id
 
   if (courseModules?.length) {
-    await sql`DELETE FROM lessons WHERE course_id = ${cid}`
-    await sql`DELETE FROM modules WHERE course_id = ${cid}`
+    const processedModIds: string[] = []
 
     for (let mi = 0; mi < courseModules.length; mi++) {
       const mod = courseModules[mi]
       if (!mod.title) continue
 
-      const savedMod = await sql`
-        INSERT INTO modules (course_id, title, position, is_published)
-        VALUES (${cid}, ${mod.title}, ${mi}, true) RETURNING id
-      `
-      const modId = savedMod[0].id
+      // UPSERT module
+      let modId: string
+      if (mod.id) {
+        await sql`UPDATE modules SET title = ${mod.title}, position = ${mi} WHERE id = ${mod.id}`
+        modId = mod.id
+        processedModIds.push(modId)
+      } else {
+        const savedMod = await sql`
+          INSERT INTO modules (course_id, title, position, is_published)
+          VALUES (${cid}, ${mod.title}, ${mi}, true) RETURNING id
+        `
+        modId = savedMod[0].id
+        processedModIds.push(modId)
+      }
 
       if (mod.lessons?.length) {
+        const processedLessonIds: string[] = []
+
         for (let li = 0; li < mod.lessons.length; li++) {
           const l = mod.lessons[li]
           if (!l.title && l.type !== 'text_header') continue
 
           const lessonDbType = dbType(l.type || 'text')
-
-          // Store the UI type in content as metadata so we can retrieve it
-          // We encode: type|content so text lessons can carry their subtype
           let storedContent = l.content || null
-          if (['text_header','page','file','url','survey'].includes(l.type)) {
-            // Store original type as prefix in content for retrieval
-            const prefix = `__type:${l.type}__`
-            storedContent = prefix + (l.content || '')
+          if (['text_header', 'page', 'file', 'url', 'survey'].includes(l.type)) {
+            storedContent = `__type:${l.type}__` + (l.content || '')
           }
 
-          try {
-            await sql`
-              INSERT INTO lessons (
-                module_id, course_id, title, type,
-                video_url, external_url, file_url, file_name,
-                content, position, is_published, is_preview, video_duration
-              ) VALUES (
-                ${modId}, ${cid}, ${l.title || ''}, ${lessonDbType}::lesson_type,
-                ${l.video_url || null}, ${l.external_url || null},
-                ${l.file_url || null}, ${l.file_name || null},
-                ${storedContent}, ${li}, true,
-                ${l.is_preview || false}, ${l.video_duration || 0}
-              )
-            `
-          } catch (e: any) {
-            console.error('Lesson insert error:', e.message)
-            // Fallback without new columns
-            await sql`
-              INSERT INTO lessons (module_id, course_id, title, type, video_url, content, position, is_published, is_preview, video_duration)
-              VALUES (${modId}, ${cid}, ${l.title || ''}, ${lessonDbType}::lesson_type, ${l.video_url || null}, ${storedContent}, ${li}, true, ${l.is_preview || false}, ${l.video_duration || 0})
-            `
+          if (l.id) {
+            // UPDATE existing lesson — keeps the same ID so quiz links remain intact
+            processedLessonIds.push(l.id)
+            try {
+              await sql`
+                UPDATE lessons SET
+                  title = ${l.title || ''}, type = ${lessonDbType}::lesson_type,
+                  video_url = ${l.video_url || null},
+                  content = ${storedContent}, position = ${li},
+                  is_preview = ${l.is_preview || false},
+                  video_duration = ${l.video_duration || 0},
+                  module_id = ${modId}
+                WHERE id = ${l.id}
+              `
+              // Try updating new columns separately (may not exist in DB yet)
+              try {
+                await sql`
+                  UPDATE lessons SET
+                    external_url = ${l.external_url || null},
+                    file_url = ${l.file_url || null},
+                    file_name = ${l.file_name || null}
+                  WHERE id = ${l.id}
+                `
+              } catch (_) { /* columns may not exist yet */ }
+            } catch (e: any) {
+              console.error('Lesson update error:', e.message)
+            }
+          } else {
+            // INSERT new lesson
+            let newId: string | null = null
+            try {
+              const inserted = await sql`
+                INSERT INTO lessons (
+                  module_id, course_id, title, type,
+                  video_url, external_url, file_url, file_name,
+                  content, position, is_published, is_preview, video_duration
+                ) VALUES (
+                  ${modId}, ${cid}, ${l.title || ''}, ${lessonDbType}::lesson_type,
+                  ${l.video_url || null}, ${l.external_url || null},
+                  ${l.file_url || null}, ${l.file_name || null},
+                  ${storedContent}, ${li}, true,
+                  ${l.is_preview || false}, ${l.video_duration || 0}
+                ) RETURNING id
+              `
+              newId = inserted[0].id
+            } catch (e: any) {
+              console.error('Lesson insert error (trying fallback):', e.message)
+              try {
+                const inserted = await sql`
+                  INSERT INTO lessons (module_id, course_id, title, type, video_url, content, position, is_published, is_preview, video_duration)
+                  VALUES (${modId}, ${cid}, ${l.title || ''}, ${lessonDbType}::lesson_type, ${l.video_url || null}, ${storedContent}, ${li}, true, ${l.is_preview || false}, ${l.video_duration || 0})
+                  RETURNING id
+                `
+                newId = inserted[0].id
+              } catch (e2: any) {
+                console.error('Lesson fallback insert error:', e2.message)
+              }
+            }
+            if (newId) processedLessonIds.push(newId)
           }
         }
+
+        // Delete only lessons that were explicitly removed (not just re-ordered)
+        if (processedLessonIds.length > 0) {
+          const existingLessons = await sql`SELECT id FROM lessons WHERE module_id = ${modId}`
+          const toDelete = existingLessons
+            .map((r: any) => r.id)
+            .filter((id: string) => !processedLessonIds.includes(id))
+          for (const delId of toDelete) {
+            await sql`DELETE FROM lessons WHERE id = ${delId}`
+          }
+        }
+      }
+    }
+
+    // Delete modules removed by admin
+    if (processedModIds.length > 0) {
+      const existingMods = await sql`SELECT id FROM modules WHERE course_id = ${cid}`
+      const toDelete = existingMods
+        .map((r: any) => r.id)
+        .filter((id: string) => !processedModIds.includes(id))
+      for (const delId of toDelete) {
+        await sql`DELETE FROM lessons WHERE module_id = ${delId}`
+        await sql`DELETE FROM modules WHERE id = ${delId}`
       }
     }
 
@@ -172,4 +236,27 @@ export async function PUT(request: NextRequest) {
     console.error('Course builder PUT error:', e)
     return NextResponse.json({ error: e.message }, { status: 500 })
   }
+}
+
+export async function PATCH(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user || !isAdmin((session.user as any).role)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { id, status } = await request.json()
+  if (!id || !status) return NextResponse.json({ error: 'id and status required' }, { status: 400 })
+  await sql`UPDATE courses SET status = ${status}::course_status WHERE id = ${id}`
+  return NextResponse.json({ success: true })
+}
+
+export async function DELETE(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user || !isAdmin((session.user as any).role)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { searchParams } = new URL(request.url)
+  const id = searchParams.get('id')
+  if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 })
+  await sql`DELETE FROM enrollments WHERE course_id = ${id}`
+  await sql`DELETE FROM lesson_progress WHERE course_id = ${id}`
+  await sql`DELETE FROM lessons WHERE course_id = ${id}`
+  await sql`DELETE FROM modules WHERE course_id = ${id}`
+  await sql`DELETE FROM courses WHERE id = ${id}`
+  return NextResponse.json({ success: true })
 }
