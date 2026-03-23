@@ -187,6 +187,61 @@ export default function CourseBuilderPage() {
     setSaving(false)
   }
 
+  // ── open quiz builder ──
+  async function openQuizBuilder(mi: number, li: number, lesson: any) {
+    let courseId = selectedCourseId
+
+    // Save first if lesson has no ID
+    if (!lesson.id) {
+      if (!info.title?.trim()) {
+        setSaveMsg({ type: 'error', text: 'Enter a course title first' })
+        setTab('info')
+        return
+      }
+      // Save and get the course ID from response directly
+      setSaving(true)
+      setSaveMsg(null)
+      const tags = info.tags ? info.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : []
+      const body = {
+        ...info, tags,
+        requirements: (info.requirements || []).filter(Boolean),
+        what_you_learn: (info.what_you_learn || []).filter(Boolean),
+        status: 'draft', modules,
+        ...(selectedCourseId ? { id: selectedCourseId } : {}),
+      }
+      const res = await fetch('/api/admin/course-builder', {
+        method: selectedCourseId ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      }).then(r => r.json())
+      setSaving(false)
+      if (res.error || !res.data) {
+        setSaveMsg({ type: 'error', text: res.error || 'Save failed' })
+        return
+      }
+      courseId = res.data.id
+      setSelectedCourseId(courseId)
+      setSaveMsg({ type: 'success', text: '✓ Saved!' })
+      setTimeout(() => setSaveMsg(null), 3000)
+    }
+
+    // Fetch modules from DB to get real lesson ID
+    if (!courseId) { setSaveMsg({ type: 'error', text: 'Could not determine course ID' }); return }
+    const modsRes = await fetch(`/api/instructor/courses/${courseId}/modules`).then(r => r.json())
+    if (!modsRes.data?.length) { setSaveMsg({ type: 'error', text: 'Could not load lessons from database' }); return }
+
+    // Find lesson by module position + lesson title
+    const dbMod = modsRes.data[mi] || modsRes.data.find((m: any) => m.title === modules[mi]?.title)
+    const dbLesson = dbMod?.lessons?.find((l: any) => l.title === lesson.title)
+      || dbMod?.lessons?.[li]
+
+    if (dbLesson?.id) {
+      setQuizLesson({ id: dbLesson.id, title: lesson.title || 'Quiz' })
+    } else {
+      setSaveMsg({ type: 'error', text: 'Lesson not found in database — make sure it has a title and save again' })
+    }
+  }
+
   // ── helpers ──
   const upd = (k: string, v: any) => setInfo(f => ({
     ...f, [k]: v,
@@ -468,23 +523,7 @@ export default function CourseBuilderPage() {
                                         <HelpCircle className="w-3.5 h-3.5" />Quiz Questions
                                       </p>
                                       <button type="button"
-                                        onClick={async () => {
-                                          // Save first to get lesson ID, then open quiz builder
-                                          if (!lesson.id) {
-                                            await saveCourse(false)
-                                          }
-                                          // After save, fetch lesson ID from DB by title+module
-                                          if (selectedCourseId) {
-                                            const modsRes = await fetch(`/api/instructor/courses/${selectedCourseId}/modules`).then(r => r.json())
-                                            const dbMod = modsRes.data?.find((m: any) => m.title === modules[mi]?.title) || modsRes.data?.[mi]
-                                            const dbLesson = dbMod?.lessons?.find((l: any) => l.title === lesson.title) || dbMod?.lessons?.[li]
-                                            if (dbLesson?.id) {
-                                              setQuizLesson({ id: dbLesson.id, title: lesson.title || 'Quiz' })
-                                              return
-                                            }
-                                          }
-                                          if (lesson.id) setQuizLesson({ id: lesson.id, title: lesson.title || 'Quiz' })
-                                        }}
+                                        onClick={() => openQuizBuilder(mi, li, lesson)}
                                         className="text-xs bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-semibold flex items-center gap-1.5 shadow-sm">
                                         <HelpCircle className="w-3.5 h-3.5" />
                                         {lesson.id ? 'Build / Edit Quiz' : 'Save & Build Quiz'}
