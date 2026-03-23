@@ -37,9 +37,9 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
           'video_duration', COALESCE(l.video_duration, 0),
           'quiz_id', (SELECT q.id FROM quizzes q WHERE q.lesson_id = l.id LIMIT 1),
           'quiz_title', (SELECT q.title FROM quizzes q WHERE q.lesson_id = l.id LIMIT 1),
-          'quiz_question_count', (SELECT COUNT(*) FROM quiz_questions qq JOIN quizzes q ON qq.quiz_id = q.id WHERE q.lesson_id = l.id),
+          'quiz_question_count', (SELECT COUNT(*) FROM questions qu WHERE qu.quiz_id = (SELECT q.id FROM quizzes q WHERE q.lesson_id = l.id LIMIT 1)),
           'quiz_passing_score', (SELECT q.passing_score FROM quizzes q WHERE q.lesson_id = l.id LIMIT 1),
-          'quiz_attempts_allowed', (SELECT q.attempts_allowed FROM quizzes q WHERE q.lesson_id = l.id LIMIT 1)
+          'quiz_attempts_allowed', (SELECT q.max_attempts FROM quizzes q WHERE q.lesson_id = l.id LIMIT 1)
         ) ORDER BY l.position
       ) FILTER (WHERE l.id IS NOT NULL) as lessons
     FROM modules m
