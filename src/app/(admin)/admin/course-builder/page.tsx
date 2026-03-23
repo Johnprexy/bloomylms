@@ -227,24 +227,14 @@ export default function CourseBuilderPage() {
       courseId = saveRes.data.id
       setSelectedCourseId(courseId!)
 
-      // Step 2: fetch lesson ID from DB
-      const modsRes = await fetch(`/api/instructor/courses/${courseId}/modules`).then(r => r.json())
-      const allLessons = modsRes.data?.flatMap((m: any) => m.lessons || []) || []
-      
-      // Match by title (most reliable)
+      // Step 2: fetch lesson ID directly from DB by course + title
       const lessonTitle = lesson.title?.trim()
-      let dbLesson = allLessons.find((l: any) => l.title?.trim() === lessonTitle)
+      const lessonRes = await fetch(`/api/admin/quiz-builder/lesson?course_id=${courseId}&title=${encodeURIComponent(lessonTitle)}`).then(r => r.json())
       
-      // Fallback: match by module+position
-      if (!dbLesson) {
-        const dbMod = modsRes.data?.[mi]
-        dbLesson = dbMod?.lessons?.[li]
-      }
-
-      if (dbLesson?.id) {
-        setQuizLesson({ id: dbLesson.id, title: lesson.title || 'Quiz' })
+      if (lessonRes.id) {
+        setQuizLesson({ id: lessonRes.id, title: lessonTitle || 'Quiz' })
       } else {
-        setSaveMsg({ type: 'error', text: `Quiz lesson "${lessonTitle}" not found in DB. Try clicking Save Draft first, then Build Quiz.` })
+        setSaveMsg({ type: 'error', text: `Could not find lesson in DB. Error: ${lessonRes.error || 'unknown'}` })
       }
     } catch (e: any) {
       setSaveMsg({ type: 'error', text: 'Error: ' + e.message })
