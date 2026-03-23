@@ -188,19 +188,23 @@ export default function CourseBuilderPage() {
   }
 
   // ── open quiz builder ──
-  async function openQuizBuilder(mi: number, li: number, lesson: any) {
-    let courseId = selectedCourseId
+  const [openingQuiz, setOpeningQuiz] = useState<string | null>(null) // key = `${mi}-${li}`
 
-    // Save first if lesson has no ID
-    if (!lesson.id) {
+  async function openQuizBuilder(mi: number, li: number, lesson: any) {
+    const key = `${mi}-${li}`
+    setOpeningQuiz(key)
+    setSaveMsg(null)
+
+    try {
+      // Step 1: ensure course is saved and get courseId
+      let courseId = selectedCourseId
       if (!info.title?.trim()) {
-        setSaveMsg({ type: 'error', text: 'Enter a course title first' })
+        setSaveMsg({ type: 'error', text: 'Enter a course title first (Course Info tab)' })
         setTab('info')
+        setOpeningQuiz(null)
         return
       }
-      // Save and get the course ID from response directly
-      setSaving(true)
-      setSaveMsg(null)
+
       const tags = info.tags ? info.tags.split(',').map((t: string) => t.trim()).filter(Boolean) : []
       const body = {
         ...info, tags,
@@ -209,37 +213,43 @@ export default function CourseBuilderPage() {
         status: 'draft', modules,
         ...(selectedCourseId ? { id: selectedCourseId } : {}),
       }
-      const res = await fetch('/api/admin/course-builder', {
+      const saveRes = await fetch('/api/admin/course-builder', {
         method: selectedCourseId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       }).then(r => r.json())
-      setSaving(false)
-      if (res.error || !res.data) {
-        setSaveMsg({ type: 'error', text: res.error || 'Save failed' })
+
+      if (saveRes.error || !saveRes.data?.id) {
+        setSaveMsg({ type: 'error', text: 'Save failed: ' + (saveRes.error || 'unknown error') })
+        setOpeningQuiz(null)
         return
       }
-      courseId = res.data.id
-      setSelectedCourseId(courseId)
-      setSaveMsg({ type: 'success', text: '✓ Saved!' })
-      setTimeout(() => setSaveMsg(null), 3000)
+      courseId = saveRes.data.id
+      setSelectedCourseId(courseId!)
+
+      // Step 2: fetch lesson ID from DB
+      const modsRes = await fetch(`/api/instructor/courses/${courseId}/modules`).then(r => r.json())
+      const allLessons = modsRes.data?.flatMap((m: any) => m.lessons || []) || []
+      
+      // Match by title (most reliable)
+      const lessonTitle = lesson.title?.trim()
+      let dbLesson = allLessons.find((l: any) => l.title?.trim() === lessonTitle)
+      
+      // Fallback: match by module+position
+      if (!dbLesson) {
+        const dbMod = modsRes.data?.[mi]
+        dbLesson = dbMod?.lessons?.[li]
+      }
+
+      if (dbLesson?.id) {
+        setQuizLesson({ id: dbLesson.id, title: lesson.title || 'Quiz' })
+      } else {
+        setSaveMsg({ type: 'error', text: `Quiz lesson "${lessonTitle}" not found in DB. Try clicking Save Draft first, then Build Quiz.` })
+      }
+    } catch (e: any) {
+      setSaveMsg({ type: 'error', text: 'Error: ' + e.message })
     }
-
-    // Fetch modules from DB to get real lesson ID
-    if (!courseId) { setSaveMsg({ type: 'error', text: 'Could not determine course ID' }); return }
-    const modsRes = await fetch(`/api/instructor/courses/${courseId}/modules`).then(r => r.json())
-    if (!modsRes.data?.length) { setSaveMsg({ type: 'error', text: 'Could not load lessons from database' }); return }
-
-    // Find lesson by module position + lesson title
-    const dbMod = modsRes.data[mi] || modsRes.data.find((m: any) => m.title === modules[mi]?.title)
-    const dbLesson = dbMod?.lessons?.find((l: any) => l.title === lesson.title)
-      || dbMod?.lessons?.[li]
-
-    if (dbLesson?.id) {
-      setQuizLesson({ id: dbLesson.id, title: lesson.title || 'Quiz' })
-    } else {
-      setSaveMsg({ type: 'error', text: 'Lesson not found in database — make sure it has a title and save again' })
-    }
+    setOpeningQuiz(null)
   }
 
   // ── helpers ──
@@ -517,23 +527,21 @@ export default function CourseBuilderPage() {
                                 )}
                                 {/* QUIZ */}
                                 {lesson.type === 'quiz' && (
-                                  <div className="mt-2 bg-purple-50 border border-purple-100 rounded-xl p-3 space-y-2">
+                                  <div className="mt-2 bg-purple-50 border border-purple-100 rounded-xl p-3">
                                     <div className="flex items-center justify-between gap-2">
                                       <p className="text-xs font-semibold text-purple-700 flex items-center gap-1.5">
-                                        <HelpCircle className="w-3.5 h-3.5" />Quiz Questions
+                                        <HelpCircle className="w-3.5 h-3.5" />
+                                        {lesson.id ? '✓ Quiz ready' : 'Quiz Questions'}
                                       </p>
                                       <button type="button"
+                                        disabled={openingQuiz === `${mi}-${li}`}
                                         onClick={() => openQuizBuilder(mi, li, lesson)}
-                                        className="text-xs bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-semibold flex items-center gap-1.5 shadow-sm">
-                                        <HelpCircle className="w-3.5 h-3.5" />
-                                        {lesson.id ? 'Build / Edit Quiz' : 'Save & Build Quiz'}
+                                        className="text-xs bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-semibold flex items-center gap-1.5 shadow-sm disabled:opacity-70">
+                                        {openingQuiz === `${mi}-${li}`
+                                          ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Opening...</>
+                                          : <><HelpCircle className="w-3.5 h-3.5" />Build Quiz</>}
                                       </button>
                                     </div>
-                                    <p className="text-xs text-purple-500">
-                                      {lesson.id
-                                        ? '✓ Ready — click to add/edit questions'
-                                        : 'Click "Save & Build Quiz" — saves the course then opens the quiz builder'}
-                                    </p>
                                   </div>
                                 )}
                                 {/* SURVEY */}
