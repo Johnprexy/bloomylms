@@ -139,7 +139,6 @@ export default function QuizBuilder({ lessonId, lessonTitle, courseId, onClose, 
     if (res.data) {
       setQuizId(res.data.quiz_id)
       setSaved(true)
-      setTimeout(() => setSaved(false), 3000)
       onSaved?.()
     }
   }
@@ -220,8 +219,12 @@ export default function QuizBuilder({ lessonId, lessonTitle, courseId, onClose, 
           <div className="flex items-center gap-2">
             {saved && <span className="text-xs text-green-600 font-medium flex items-center gap-1"><CheckCircle className="w-3.5 h-3.5" />Saved!</span>}
             <button onClick={handleSave} disabled={saving}
-              className="btn-primary text-sm flex items-center gap-1.5 py-2">
-              {saving ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}Save Quiz
+              className={`text-sm flex items-center gap-1.5 py-2 px-4 rounded-xl font-semibold transition-all ${saved ? 'bg-green-600 hover:bg-green-700 text-white' : 'btn-primary'}`}>
+              {saving
+                ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Saving...</>
+                : saved
+                ? <><CheckCircle className="w-3.5 h-3.5" />Saved ✓</>
+                : <><Save className="w-3.5 h-3.5" />Save Quiz</>}
             </button>
             <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500">
               <X className="w-4 h-4" />
@@ -248,8 +251,10 @@ export default function QuizBuilder({ lessonId, lessonTitle, courseId, onClose, 
         </div>
 
         {error && (
-          <div className="mx-6 mt-3 flex items-center gap-2 bg-red-50 text-red-700 text-sm px-4 py-2.5 rounded-xl border border-red-100 flex-shrink-0">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />{error}
+          <div className="mx-6 mb-2 flex items-center gap-2 bg-red-50 text-red-700 text-sm px-4 py-2.5 rounded-xl border border-red-100 flex-shrink-0">
+            <AlertCircle className="w-4 h-4 flex-shrink-0" />
+            <span className="flex-1">{error}</span>
+            <button onClick={() => setError('')} className="text-red-400 hover:text-red-600 flex-shrink-0">✕</button>
           </div>
         )}
 
