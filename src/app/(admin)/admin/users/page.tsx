@@ -2,7 +2,8 @@ import { redirect } from 'next/navigation'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { sql } from '@/lib/db'
-import { Users, GraduationCap, UserCheck, Shield, Search } from 'lucide-react'
+import { Users, GraduationCap, UserCheck, Shield, Search, UserPlus } from 'lucide-react'
+import CreateAdminButton from '@/components/admin/CreateAdminButton'
 import { format } from 'date-fns'
 import AdminUserActions from '@/components/admin/AdminUserActions'
 
@@ -74,6 +75,13 @@ export default async function AdminUsersPage({ searchParams }: { searchParams: {
           <input name="search" defaultValue={search} placeholder="Search name or email..." className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-bloomy-500" />
         </form>
       </div>
+
+      {/* Create Admin button - only for super_admin */}
+      {session.user && (session.user as any).role === 'super_admin' && (
+        <div className="flex justify-end">
+          <CreateAdminButton />
+        </div>
+      )}
 
       {/* Role filters */}
       <div className="flex gap-2 flex-wrap">
