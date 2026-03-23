@@ -153,18 +153,20 @@ export default function CourseBuilderPage() {
           return
         }
 
-        // Update lesson IDs from DB without overwriting module content
-        // Fetch just the modules to get real IDs for quiz builder
+        // Update module + lesson IDs from DB (match by title+position for reliability)
         const modsRes = await fetch(`/api/instructor/courses/${newId}/modules`).then(r => r.json())
         if (modsRes.data?.length) {
           setModules(prev => prev.map((mod: any, mi: number) => {
+            // Match module by position
             const dbMod = modsRes.data[mi]
             if (!dbMod) return mod
             return {
               ...mod,
               id: dbMod.id,
               lessons: (mod.lessons || []).map((lesson: any, li: number) => {
-                const dbLesson = dbMod.lessons?.[li]
+                // Match lesson by position index first, then by title as fallback
+                const dbLesson = dbMod.lessons?.[li] ||
+                  dbMod.lessons?.find((dl: any) => dl.title === lesson.title)
                 return dbLesson ? { ...lesson, id: dbLesson.id } : lesson
               })
             }
@@ -458,29 +460,28 @@ export default function CourseBuilderPage() {
                                 {/* QUIZ */}
                                 {lesson.type === 'quiz' && (
                                   <div className="mt-2 bg-purple-50 border border-purple-100 rounded-xl p-3 space-y-2">
-                                    <div className="flex items-center justify-between">
+                                    <div className="flex items-center justify-between gap-2">
                                       <p className="text-xs font-semibold text-purple-700 flex items-center gap-1.5">
                                         <HelpCircle className="w-3.5 h-3.5" />Quiz Questions
                                       </p>
                                       {lesson.id ? (
                                         <button type="button"
                                           onClick={() => setQuizLesson({ id: lesson.id!, title: lesson.title || 'Quiz' })}
-                                          className="text-xs bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 font-semibold flex items-center gap-1">
-                                          <HelpCircle className="w-3 h-3" />Build / Edit Quiz
+                                          className="text-xs bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-semibold flex items-center gap-1.5 shadow-sm">
+                                          <HelpCircle className="w-3.5 h-3.5" />Build / Edit Quiz
                                         </button>
                                       ) : (
-                                        <button type="button" onClick={() => saveCourse(false)}
-                                          className="text-xs bg-purple-600 text-white px-3 py-1.5 rounded-lg hover:bg-purple-700 font-semibold flex items-center gap-1.5">
-                                          <Save className="w-3 h-3" />Save course first
+                                        <button type="button" onClick={async () => { await saveCourse(false) }}
+                                          className="text-xs bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-semibold flex items-center gap-1.5 shadow-sm">
+                                          <Save className="w-3.5 h-3.5" />Save Draft First
                                         </button>
                                       )}
                                     </div>
-                                    {!lesson.id && (
-                                      <p className="text-xs text-purple-500">Enter a title above, save the course, then click "Build / Edit Quiz" to add questions.</p>
-                                    )}
-                                    {lesson.id && (
-                                      <p className="text-xs text-purple-500">Click "Build / Edit Quiz" to add/edit questions, set pass score, time limit and view results.</p>
-                                    )}
+                                    <p className="text-xs text-purple-500">
+                                      {lesson.id
+                                        ? '✓ Lesson saved — click "Build / Edit Quiz" to add questions'
+                                        : '① Enter a title → ② Click "Save Draft First" → ③ "Build / Edit Quiz" appears'}
+                                    </p>
                                   </div>
                                 )}
                                 {/* SURVEY */}
