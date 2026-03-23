@@ -51,19 +51,27 @@ export async function POST(req: NextRequest) {
     available_from, available_until, require_previous_lesson } = body
   if (!title?.trim()) return NextResponse.json({ error: 'Title required' }, { status: 400 })
   
-  const quiz = await sql`
-    INSERT INTO quizzes (course_id, lesson_id, title, description, instructions,
-      time_limit_minutes, passing_score, max_attempts, cooldown_minutes, grading_method,
-      shuffle_questions, shuffle_options, show_results_immediately, show_correct_answers,
-      show_explanations, available_from, available_until, require_previous_lesson,
-      status, created_by)
-    VALUES (
-      ${course_id||null}, ${lesson_id||null}, ${title}, ${description||null}, ${instructions||null},
-      ${time_limit_minutes||null}, ${passing_score||70}, ${max_attempts||3}, ${cooldown_minutes||0},
-      ${grading_method||'highest'}, ${shuffle_questions||false}, ${shuffle_options||false},
-      ${show_results_immediately??true}, ${show_correct_answers||'immediately'},
-      ${show_explanations??true}, ${available_from||null}, ${available_until||null},
-      ${require_previous_lesson||false}, 'draft', ${(session.user as any).id}
-    ) RETURNING *`
-  return NextResponse.json({ data: quiz[0] })
+  try {
+    const quiz = await sql`
+      INSERT INTO quizzes (course_id, lesson_id, title, description, instructions,
+        time_limit_minutes, passing_score, max_attempts, cooldown_minutes, grading_method,
+        shuffle_questions, shuffle_options, show_results_immediately, show_correct_answers,
+        show_explanations, available_from, available_until, require_previous_lesson,
+        status, created_by)
+      VALUES (
+        ${course_id||null}, ${lesson_id||null}, ${title}, ${description||null}, ${instructions||null},
+        ${time_limit_minutes||null}, ${passing_score||70}, ${max_attempts||3}, ${cooldown_minutes||0},
+        ${grading_method||'highest'}, ${shuffle_questions||false}, ${shuffle_options||false},
+        ${show_results_immediately??true}, ${show_correct_answers||'immediately'},
+        ${show_explanations??true}, ${available_from||null}, ${available_until||null},
+        ${require_previous_lesson||false}, 'draft', ${(session.user as any).id}
+      ) RETURNING *`
+    return NextResponse.json({ data: quiz[0] })
+  } catch (e: any) {
+    console.error('Quiz create error:', e.message)
+    if (e.message?.includes('relation') || e.message?.includes('does not exist')) {
+      return NextResponse.json({ error: 'Database tables not set up yet. Please run the quiz_v2.sql migration in Neon SQL Editor first.' }, { status: 503 })
+    }
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
 }

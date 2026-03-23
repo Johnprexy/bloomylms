@@ -22,6 +22,7 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   const body = await req.json()
   const { questions } = body // array of questions to save (replaces all)
   
+  try {
   // Delete existing questions for this quiz
   await sql`DELETE FROM question_options WHERE question_id IN (SELECT id FROM questions WHERE quiz_id = ${params.id})`
   await sql`DELETE FROM questions WHERE quiz_id = ${params.id}`
@@ -56,4 +57,8 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   await sql`UPDATE quizzes SET updated_at = NOW() WHERE id = ${params.id}`
   
   return NextResponse.json({ data: { saved_count: saved.length } })
+  } catch(e: any) {
+    if (e.message?.includes('relation') || e.message?.includes('does not exist')) return NextResponse.json({ error: 'Run quiz_v2.sql in Neon first.' }, { status: 503 })
+    return NextResponse.json({ error: e.message }, { status: 500 })
+  }
 }
