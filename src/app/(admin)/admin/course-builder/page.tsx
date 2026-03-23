@@ -153,29 +153,32 @@ export default function CourseBuilderPage() {
           return
         }
 
-        // Update module + lesson IDs from DB (match by title+position for reliability)
+        // Capture current modules state before async operations
+        const currentModules = modules
+        // Reload modules from DB to get real lesson IDs (needed for quiz builder)
+        // We reload content too but preserve current tab
         const modsRes = await fetch(`/api/instructor/courses/${newId}/modules`).then(r => r.json())
         if (modsRes.data?.length) {
-          setModules(prev => prev.map((mod: any, mi: number) => {
-            // Match module by position
-            const dbMod = modsRes.data[mi]
-            if (!dbMod) return mod
+          // Merge DB IDs into current in-memory state
+          // DB lessons are ordered by position - match by position
+          const merged = modsRes.data.map((dbMod: any, mi: number) => {
+            const memMod = currentModules[mi] // current in-memory module
+            if (!memMod) return dbMod
             return {
-              ...mod,
-              id: dbMod.id,
-              lessons: (mod.lessons || []).map((lesson: any, li: number) => {
-                // Match lesson by position index first, then by title as fallback
-                const dbLesson = dbMod.lessons?.[li] ||
-                  dbMod.lessons?.find((dl: any) => dl.title === lesson.title)
-                return dbLesson ? { ...lesson, id: dbLesson.id } : lesson
+              ...memMod,           // keep all in-memory content
+              id: dbMod.id,        // set real DB id
+              lessons: memMod.lessons.map((memLesson: any, li: number) => {
+                const dbLesson = dbMod.lessons?.[li]
+                return { ...memLesson, id: dbLesson?.id || memLesson.id }
               })
             }
-          }))
+          })
+          setModules(merged)
         }
 
         setTab(currentTab)
-        setSaveMsg({ type: 'success', text: '✓ Saved!' })
-        setTimeout(() => setSaveMsg(null), 4000)
+        setSaveMsg({ type: 'success', text: '✓ Saved! Quiz builder is now available.' })
+        setTimeout(() => setSaveMsg(null), 5000)
       }
     } catch (err: any) {
       setSaveMsg({ type: 'error', text: 'Network error — ' + (err.message || 'please try again') })
