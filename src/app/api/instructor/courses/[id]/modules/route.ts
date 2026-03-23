@@ -43,7 +43,7 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
         ) ORDER BY l.position
       ) FILTER (WHERE l.id IS NOT NULL) as lessons
     FROM modules m
-    LEFT JOIN lessons l ON l.module_id = m.id AND l.is_published = true
+    LEFT JOIN lessons l ON l.module_id = m.id
     WHERE m.course_id = ${params.id}
     GROUP BY m.id ORDER BY m.position
   `

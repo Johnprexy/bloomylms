@@ -25,7 +25,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
   const { title, description, instructions, time_limit_minutes, passing_score, max_attempts,
     cooldown_minutes, grading_method, shuffle_questions, shuffle_options,
     show_results_immediately, show_correct_answers, show_explanations,
-    available_from, available_until, require_previous_lesson, status } = body
+    available_from, available_until, require_previous_lesson, status,
+    lesson_id, course_id } = body
   const quiz = await sql`
     UPDATE quizzes SET
       title = COALESCE(${title}, title),
@@ -45,6 +46,8 @@ export async function PUT(req: NextRequest, { params }: { params: { id: string }
       available_until = ${available_until ?? null},
       require_previous_lesson = COALESCE(${require_previous_lesson}, require_previous_lesson),
       status = COALESCE(${status}, status),
+      lesson_id = COALESCE(${lesson_id || null}, lesson_id),
+      course_id = COALESCE(${course_id || null}, course_id),
       updated_at = NOW()
     WHERE id = ${params.id} RETURNING *`
   return NextResponse.json({ data: quiz[0] })
