@@ -159,32 +159,24 @@ export default function CourseBuilderPage() {
           return
         }
 
-        // Capture current modules state before async operations
-        const currentModules = modules
-        // Reload modules from DB to get real lesson IDs (needed for quiz builder)
-        // We reload content too but preserve current tab
-        const modsRes = await fetch(`/api/instructor/courses/${newId}/modules`).then(r => r.json())
-        if (modsRes.data?.length) {
-          // Merge DB IDs into current in-memory state
-          // DB lessons are ordered by position - match by position
-          const merged = modsRes.data.map((dbMod: any, mi: number) => {
-            const memMod = currentModules[mi] // current in-memory module
-            if (!memMod) return dbMod
-            return {
-              ...memMod,           // keep all in-memory content
-              id: dbMod.id,        // set real DB id
-              lessons: memMod.lessons.map((memLesson: any, li: number) => {
-                const dbLesson = dbMod.lessons?.[li]
-                return { ...memLesson, id: dbLesson?.id || memLesson.id }
-              })
-            }
-          })
-          setModules(merged)
+        // Update lesson IDs from save response (savedLessons from API)
+        const savedLessons: any[] = res.data.savedLessons || []
+        if (savedLessons.length) {
+          setModules(prev => prev.map((mod, mIdx) => ({
+            ...mod,
+            id: savedLessons.find((sl: any) => sl.module_position === mIdx)?.module_id || mod.id,
+            lessons: mod.lessons.map((l: any, lIdx: number) => {
+              const saved = savedLessons.find((sl: any) =>
+                sl.module_position === mIdx && sl.lesson_position === lIdx
+              )
+              return saved ? { ...l, id: saved.id } : l
+            })
+          })))
         }
 
         setTab(currentTab)
-        setSaveMsg({ type: 'success', text: '✓ Saved! Quiz builder is now available.' })
-        setTimeout(() => setSaveMsg(null), 5000)
+        setSaveMsg({ type: 'success', text: '✓ Saved!' })
+        setTimeout(() => setSaveMsg(null), 4000)
       }
     } catch (err: any) {
       setSaveMsg({ type: 'error', text: 'Network error — ' + (err.message || 'please try again') })
@@ -194,7 +186,7 @@ export default function CourseBuilderPage() {
   }
 
   // ── open quiz builder ──
-  const [openingQuiz, setOpeningQuiz] = useState<string | null>(null) // key = `${mi}-${li}`
+  const [openingQuiz, setOpeningQuiz] = useState<string | null>(null)
 
   async function openQuizBuilder(mi: number, li: number, lesson: any) {
     const key = `${mi}-${li}`
@@ -202,10 +194,16 @@ export default function CourseBuilderPage() {
     setSaveMsg(null)
 
     try {
-      // Step 1: ensure course is saved and get courseId
-      let courseId = selectedCourseId
+      // If lesson already has a DB id, open directly - no save needed
+      if (lesson.id) {
+        setQuizLesson({ id: lesson.id, title: lesson.title || 'Quiz' })
+        setOpeningQuiz(null)
+        return
+      }
+
+      // No id yet - need to save first
       if (!info.title?.trim()) {
-        setSaveMsg({ type: 'error', text: 'Enter a course title first (Course Info tab)' })
+        setSaveMsg({ type: 'error', text: 'Enter a course title first' })
         setTab('info')
         setOpeningQuiz(null)
         return
@@ -219,36 +217,53 @@ export default function CourseBuilderPage() {
         status: 'draft', modules,
         ...(selectedCourseId ? { id: selectedCourseId } : {}),
       }
-      const saveRes = await fetch('/api/admin/course-builder', {
+
+      const res = await fetch('/api/admin/course-builder', {
         method: selectedCourseId ? 'PUT' : 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       }).then(r => r.json())
 
-      if (saveRes.error || !saveRes.data?.id) {
-        setSaveMsg({ type: 'error', text: 'Save failed: ' + (saveRes.error || 'unknown error') })
+      if (res.error || !res.data?.id) {
+        setSaveMsg({ type: 'error', text: 'Save failed: ' + (res.error || 'unknown') })
         setOpeningQuiz(null)
         return
       }
-      courseId = saveRes.data.id
-      setSelectedCourseId(courseId!)
 
-      // Step 2: fetch lesson ID directly from DB by course + title
-      const lessonTitle = lesson.title?.trim()
-      const lessonRes = await fetch(`/api/admin/quiz-builder/lesson?course_id=${courseId}&title=${encodeURIComponent(lessonTitle)}`).then(r => r.json())
-      
-      if (lessonRes.id) {
-        setQuizLesson({ id: lessonRes.id, title: lessonTitle || 'Quiz' })
-      } else {
-        setSaveMsg({ type: 'error', text: `Could not find lesson in DB. Error: ${lessonRes.error || 'unknown'}` })
+      setSelectedCourseId(res.data.id)
+
+      // Update all lesson IDs from the save response
+      const savedLessons: any[] = res.data.savedLessons || []
+      if (savedLessons.length) {
+        setModules(prev => prev.map((mod, mIdx) => ({
+          ...mod,
+          id: savedLessons.find((sl: any) => sl.module_position === mIdx)?.module_id || mod.id,
+          lessons: mod.lessons.map((l: any, lIdx: number) => {
+            const saved = savedLessons.find((sl: any) =>
+              sl.module_position === mIdx && sl.lesson_position === lIdx
+            )
+            return saved ? { ...l, id: saved.id } : l
+          })
+        })))
+        // Find THIS lesson's id from saved response
+        const thisLesson = savedLessons.find((sl: any) =>
+          sl.module_position === mi && sl.lesson_position === li
+        )
+        if (thisLesson?.id) {
+          setQuizLesson({ id: thisLesson.id, title: lesson.title || 'Quiz' })
+          setOpeningQuiz(null)
+          return
+        }
       }
+
+      setSaveMsg({ type: 'error', text: 'Lesson saved but could not find its ID. Try Save Draft then click Build Quiz.' })
     } catch (e: any) {
       setSaveMsg({ type: 'error', text: 'Error: ' + e.message })
     }
     setOpeningQuiz(null)
   }
 
-  // ── helpers ──
+    // ── helpers ──
   const upd = (k: string, v: any) => setInfo(f => ({
     ...f, [k]: v,
     ...(k === 'title' && !selectedCourseId ? { slug: slugify(v) } : {})

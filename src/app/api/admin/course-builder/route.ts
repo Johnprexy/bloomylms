@@ -205,7 +205,15 @@ async function upsertCourseWithModules(courseId: string | null, userId: string, 
     await sql`UPDATE courses SET total_lessons = ${Number(count[0].n)} WHERE id = ${cid}`
   }
 
-  return course[0]
+  // Return course + all lesson IDs so frontend can map them back
+  const savedLessons = await sql`
+    SELECT l.id, l.title, l.type, m.id as module_id,
+           m.position as module_position, l.position as lesson_position
+    FROM lessons l JOIN modules m ON l.module_id = m.id
+    WHERE m.course_id = ${cid}
+    ORDER BY m.position, l.position
+  `
+  return { ...course[0], savedLessons }
 }
 
 export async function POST(request: NextRequest) {
