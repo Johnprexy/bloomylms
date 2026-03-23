@@ -34,7 +34,8 @@ export async function GET(_: NextRequest, { params }: { params: { id: string } }
           'content', COALESCE(l.content, ''),
           'position', l.position,
           'is_preview', COALESCE(l.is_preview, false),
-          'video_duration', COALESCE(l.video_duration, 0)
+          'video_duration', COALESCE(l.video_duration, 0),
+          'quiz_id', (SELECT q.id FROM quizzes q WHERE q.lesson_id = l.id LIMIT 1)
         ) ORDER BY l.position
       ) FILTER (WHERE l.id IS NOT NULL) as lessons
     FROM modules m

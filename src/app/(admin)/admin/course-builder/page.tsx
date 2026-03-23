@@ -85,6 +85,7 @@ export default function CourseBuilderPage() {
           content: l.content || '', file_url: l.file_url || '',
           file_name: l.file_name || '', is_preview: l.is_preview || false,
           video_duration: l.video_duration || 0,
+          hasQuiz: l.type === 'quiz' && !!l.quiz_id,
         })) : [emptyLesson()]
       })))
     }
@@ -579,11 +580,11 @@ export default function CourseBuilderPage() {
           courseId={selectedCourseId || undefined}
           onClose={() => setQuizLesson(null)}
           onSaved={() => {
-            // Mark the lesson as having a saved quiz
+            const lessonId = quizLesson.id
             setModules(prev => prev.map(mod => ({
               ...mod,
               lessons: mod.lessons.map((l: any) =>
-                l.id === quizLesson?.id ? { ...l, hasQuiz: true } as any : l
+                l.id === lessonId ? { ...l, hasQuiz: true } as any : l
               )
             })))
           }}
