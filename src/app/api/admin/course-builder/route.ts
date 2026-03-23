@@ -106,7 +106,7 @@ async function upsertCourseWithModules(courseId: string | null, userId: string, 
 
         for (let li = 0; li < mod.lessons.length; li++) {
           const l = mod.lessons[li]
-          if (!l.title && l.type !== 'text_header') continue
+          if (!l.title && l.type !== 'text_header' && l.type !== 'quiz' && l.type !== 'assignment') continue
 
           const lessonDbType = dbType(l.type || 'text')
           let storedContent = l.content || null

@@ -32,6 +32,7 @@ export default function QuizBuilderPage() {
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [savedQuizData, setSavedQuizData] = useState<any>(null)
   const [error, setError] = useState('')
 
   // Existing quizzes for selected course
@@ -86,6 +87,7 @@ export default function QuizBuilderPage() {
     setExpanded(new Set([0]))
     setError('')
     setSaved(false)
+    setSavedQuizData(null)
   }
 
   async function save() {
@@ -112,8 +114,17 @@ export default function QuizBuilderPage() {
     }).then(r => r.json())
     setSaving(false)
     if (res.error) { setError(res.error); return }
-    setSaved(true); setTimeout(() => setSaved(false), 3000)
-    setEditingQuizId(res.data?.quiz_id || editingQuizId)
+    const savedId = res.data?.quiz_id || editingQuizId
+    setEditingQuizId(savedId)
+    setSaved(true)
+    setSavedQuizData({
+      id: savedId,
+      title: quizTitle,
+      question_count: valid.length,
+      total_points: valid.reduce((s: number, q: any) => s + (q.points || 1), 0),
+      passing_score: passingScore,
+      course_name: courses.find((c: any) => c.id === courseId)?.title || 'Course',
+    })
     // Refresh quiz list
     const d = await fetch(`/api/admin/quiz-builder?course_id=${courseId}`).then(r => r.json())
     setQuizzes(d.quizzes || [])
@@ -409,20 +420,50 @@ export default function QuizBuilderPage() {
         </button>
       </div>
 
-      {/* Bottom save bar */}
-      <div className="sticky bottom-4 bg-white border border-gray-200 rounded-2xl shadow-lg px-5 py-4 flex items-center justify-between gap-4">
-        <div className="text-sm text-gray-600">
-          <span className="font-semibold">{questions.filter(q => q.question.trim()).length}</span> questions · <span className="font-semibold">{total}</span> pts · pass at <span className="font-semibold">{passingScore}%</span>
+      {/* Saved quiz summary panel */}
+      {savedQuizData && (
+        <div className="sticky bottom-4 bg-green-600 text-white rounded-2xl shadow-xl px-5 py-4">
+          <div className="flex items-start gap-4 flex-wrap">
+            <CheckCircle className="w-8 h-8 text-green-200 flex-shrink-0 mt-0.5" />
+            <div className="flex-1 min-w-0">
+              <p className="font-bold text-lg">Quiz Saved! ✓</p>
+              <p className="text-green-200 text-sm mt-0.5">
+                <span className="font-semibold text-white">{savedQuizData.title}</span>
+                {' · '}{savedQuizData.question_count} question{savedQuizData.question_count !== 1 ? 's' : ''}
+                {' · '}{savedQuizData.total_points} pts total
+                {' · '}Pass at {savedQuizData.passing_score}%
+              </p>
+              <p className="text-green-200 text-xs mt-1">Course: {savedQuizData.course_name}</p>
+            </div>
+            <div className="flex items-center gap-2 flex-shrink-0">
+              <button onClick={() => { setSavedQuizData(null); setSaved(false) }}
+                className="bg-white/20 hover:bg-white/30 text-white text-sm font-semibold px-4 py-2 rounded-xl flex items-center gap-2">
+                <HelpCircle className="w-4 h-4" />Edit This Quiz
+              </button>
+              <button onClick={() => { newQuiz(); setSaved(false) }}
+                className="bg-white text-green-700 text-sm font-semibold px-4 py-2 rounded-xl flex items-center gap-2 hover:bg-green-50">
+                <Plus className="w-4 h-4" />Create Another Quiz
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          {saved && <span className="text-sm text-green-600 font-medium flex items-center gap-1.5"><CheckCircle className="w-4 h-4" />Saved!</span>}
-          <button onClick={save} disabled={saving || !courseId}
-            className="btn-primary flex items-center gap-2 text-sm">
-            {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            {editingQuizId ? 'Update Quiz' : 'Save Quiz'}
-          </button>
+      )}
+
+      {/* Bottom save bar - only show when not showing saved panel */}
+      {!savedQuizData && (
+        <div className="sticky bottom-4 bg-white border border-gray-200 rounded-2xl shadow-lg px-5 py-4 flex items-center justify-between gap-4">
+          <div className="text-sm text-gray-600">
+            <span className="font-semibold">{questions.filter(q => q.question.trim()).length}</span> questions · <span className="font-semibold">{total}</span> pts · pass at <span className="font-semibold">{passingScore}%</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={save} disabled={saving || !courseId}
+              className="btn-primary flex items-center gap-2 text-sm">
+              {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              {editingQuizId ? 'Update Quiz' : 'Save Quiz'}
+            </button>
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }
