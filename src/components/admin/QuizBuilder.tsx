@@ -99,23 +99,20 @@ export default function QuizBuilder({ lessonId, lessonTitle, courseId, onClose, 
 
   async function handleSave() {
     const validQs = questions.filter(q => q.question.trim())
-    if (!validQs.length) { setError('Add at least one question'); return }
+    if (!validQs.length) { setError('Add at least one question with text'); return }
 
-    // Validate answers
+    // Warn about missing answers but don't block save
+    const warnings: string[] = []
     for (let i = 0; i < validQs.length; i++) {
       const q = validQs[i]
-      if (q.type === 'multiple_choice' && !q.correct_answer) {
-        setError(`Question ${i + 1}: select the correct answer`); return
-      }
-      if (q.type === 'multiple_answer' && !q.correct_answers.length) {
-        setError(`Question ${i + 1}: select at least one correct answer`); return
-      }
-      if (q.type === 'true_false' && !q.correct_answer) {
-        setError(`Question ${i + 1}: select True or False`); return
-      }
-      if ((q.type === 'fill_blank' || q.type === 'short_text') && !q.correct_answer) {
-        setError(`Question ${i + 1}: provide the expected answer`); return
-      }
+      if (q.type === 'multiple_choice' && !q.correct_answer) warnings.push(`Q${i + 1}: no correct answer marked`)
+      if (q.type === 'multiple_answer' && !q.correct_answers.length) warnings.push(`Q${i + 1}: no correct answers marked`)
+      if (q.type === 'true_false' && !q.correct_answer) warnings.push(`Q${i + 1}: True/False not selected`)
+    }
+    if (warnings.length) {
+      // Show warning but allow user to proceed
+      const proceed = window.confirm(`⚠ Some questions have no correct answer set:\n${warnings.join('\n')}\n\nSave anyway? (Students won't be able to complete this quiz until answers are set)`)
+      if (!proceed) return
     }
 
     setError('')
@@ -216,8 +213,14 @@ export default function QuizBuilder({ lessonId, lessonTitle, courseId, onClose, 
             </div>
             <p className="text-xs text-gray-400 mt-0.5 truncate max-w-sm">{lessonTitle}</p>
           </div>
-          <div className="flex items-center gap-2">
-            {saved && <span className="text-xs text-green-600 font-medium flex items-center gap-1"><CheckCircle className="w-3.5 h-3.5" />Saved!</span>}
+          <div className="flex items-center gap-2 flex-wrap justify-end">
+            {error && (
+              <div className="flex items-center gap-1.5 bg-red-50 text-red-700 text-xs px-3 py-1.5 rounded-lg border border-red-100 max-w-xs">
+                <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+                <span className="flex-1 truncate">{error}</span>
+                <button onClick={() => setError('')} className="text-red-400 hover:text-red-600 flex-shrink-0 ml-1">✕</button>
+              </div>
+            )}
             <button onClick={handleSave} disabled={saving}
               className={`text-sm flex items-center gap-1.5 py-2 px-4 rounded-xl font-semibold transition-all ${saved ? 'bg-green-600 hover:bg-green-700 text-white' : 'btn-primary'}`}>
               {saving
@@ -250,13 +253,7 @@ export default function QuizBuilder({ lessonId, lessonTitle, courseId, onClose, 
           </div>
         </div>
 
-        {error && (
-          <div className="mx-6 mb-2 flex items-center gap-2 bg-red-50 text-red-700 text-sm px-4 py-2.5 rounded-xl border border-red-100 flex-shrink-0">
-            <AlertCircle className="w-4 h-4 flex-shrink-0" />
-            <span className="flex-1">{error}</span>
-            <button onClick={() => setError('')} className="text-red-400 hover:text-red-600 flex-shrink-0">✕</button>
-          </div>
-        )}
+
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
