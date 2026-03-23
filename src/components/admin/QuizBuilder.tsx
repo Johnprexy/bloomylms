@@ -26,7 +26,7 @@ interface Props {
   lessonTitle: string
   courseId?: string
   onClose: () => void
-  onSaved?: () => void
+  onSaved?: (data?: { quiz_id: string; title: string; question_count: number; passing_score: number; attempts_allowed: number }) => void
 }
 
 const defaultQ = (): Question => ({
@@ -136,7 +136,7 @@ export default function QuizBuilder({ lessonId, lessonTitle, courseId, onClose, 
     if (res.data) {
       setQuizId(res.data.quiz_id)
       setSaved(true)
-      onSaved?.()
+      onSaved?.({ quiz_id: res.data.quiz_id, title, question_count: validQs.length, passing_score: passingScore, attempts_allowed: attemptsAllowed })
     }
   }
 

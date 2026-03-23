@@ -85,6 +85,11 @@ export default function CourseBuilderPage() {
           content: l.content || '', file_url: l.file_url || '',
           file_name: l.file_name || '', is_preview: l.is_preview || false,
           video_duration: l.video_duration || 0,
+          quiz_id: l.quiz_id || null,
+          quiz_title: l.quiz_title || '',
+          quiz_question_count: l.quiz_question_count || 0,
+          quiz_passing_score: l.quiz_passing_score || 70,
+          quiz_attempts_allowed: l.quiz_attempts_allowed || 3,
           hasQuiz: l.type === 'quiz' && !!l.quiz_id,
         })) : [emptyLesson()]
       })))
@@ -517,24 +522,57 @@ export default function CourseBuilderPage() {
                                   </div>
                                 )}
                                 {/* QUIZ */}
-                                {lesson.type === 'quiz' && (
-                                  <div className={`mt-2 rounded-xl p-3 border ${(lesson as any).hasQuiz || lesson.id ? 'bg-green-50 border-green-200' : 'bg-purple-50 border-purple-100'}`}>
-                                    <div className="flex items-center justify-between gap-2">
-                                      <p className={`text-xs font-semibold flex items-center gap-1.5 ${(lesson as any).hasQuiz || lesson.id ? 'text-green-700' : 'text-purple-700'}`}>
-                                        <HelpCircle className="w-3.5 h-3.5" />
-                                        {(lesson as any).hasQuiz ? '✓ Quiz saved — click to edit' : lesson.id ? '✓ Lesson saved — click to build quiz' : 'Click to save & build quiz'}
-                                      </p>
-                                      <button type="button"
-                                        disabled={openingQuiz === `${mi}-${li}`}
-                                        onClick={() => openQuizBuilder(mi, li, lesson)}
-                                        className={`text-xs px-4 py-2 rounded-lg font-semibold flex items-center gap-1.5 shadow-sm disabled:opacity-70 ${(lesson as any).hasQuiz ? 'bg-green-600 hover:bg-green-700 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}>
-                                        {openingQuiz === `${mi}-${li}`
-                                          ? <><Loader2 className="w-3.5 h-3.5 animate-spin" />Opening...</>
-                                          : <><HelpCircle className="w-3.5 h-3.5" />{(lesson as any).hasQuiz ? 'Edit Quiz' : 'Build Quiz'}</>}
-                                      </button>
+                                {lesson.type === 'quiz' && (() => {
+                                  const hasQuiz = !!(lesson as any).quiz_id
+                                  const qCount = (lesson as any).quiz_question_count || 0
+                                  const qTitle = (lesson as any).quiz_title || lesson.title
+                                  const passScore = (lesson as any).quiz_passing_score || 70
+                                  const attAllowed = (lesson as any).quiz_attempts_allowed || 3
+                                  return (
+                                    <div className={`mt-2 rounded-xl border overflow-hidden ${hasQuiz ? 'border-green-200' : 'border-purple-100'}`}>
+                                      {/* Quiz info header */}
+                                      <div className={`flex items-center gap-3 px-3 py-2.5 ${hasQuiz ? 'bg-green-50' : 'bg-purple-50'}`}>
+                                        <HelpCircle className={`w-4 h-4 flex-shrink-0 ${hasQuiz ? 'text-green-600' : 'text-purple-500'}`} />
+                                        <div className="flex-1 min-w-0">
+                                          {hasQuiz ? (
+                                            <div className="flex items-center gap-2 flex-wrap">
+                                              <span className="text-xs font-bold text-green-700">{qTitle}</span>
+                                              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">{qCount} question{qCount !== 1 ? 's' : ''}</span>
+                                              <span className="text-xs text-green-600">Pass: {passScore}%</span>
+                                              <span className="text-xs text-green-600">{attAllowed} attempt{attAllowed !== 1 ? 's' : ''}</span>
+                                            </div>
+                                          ) : (
+                                            <span className="text-xs font-medium text-purple-600">No quiz built yet — click Build Quiz</span>
+                                          )}
+                                        </div>
+                                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                                          {hasQuiz && (
+                                            <button type="button"
+                                              onClick={async () => {
+                                                if (!confirm('Delete this quiz and all its questions? This cannot be undone.')) return
+                                                const qid = (lesson as any).quiz_id
+                                                await fetch(`/api/admin/quiz-builder?quiz_id=${qid}`, { method: 'DELETE' })
+                                                updLesson(mi, li, 'quiz_id', null)
+                                                updLesson(mi, li, 'quiz_question_count', 0)
+                                                updLesson(mi, li, 'hasQuiz', false)
+                                              }}
+                                              className="text-xs text-red-400 hover:text-red-600 hover:bg-red-50 px-2 py-1.5 rounded-lg flex items-center gap-1 transition-colors">
+                                              <Trash2 className="w-3.5 h-3.5" />Delete Quiz
+                                            </button>
+                                          )}
+                                          <button type="button"
+                                            disabled={openingQuiz === `${mi}-${li}`}
+                                            onClick={() => openQuizBuilder(mi, li, lesson)}
+                                            className={`text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 disabled:opacity-70 ${hasQuiz ? 'bg-bloomy-600 hover:bg-bloomy-700 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}>
+                                            {openingQuiz === `${mi}-${li}`
+                                              ? <><Loader2 className="w-3 h-3 animate-spin" />Opening...</>
+                                              : <><HelpCircle className="w-3 h-3" />{hasQuiz ? 'Edit Quiz' : 'Build Quiz'}</>}
+                                          </button>
+                                        </div>
+                                      </div>
                                     </div>
-                                  </div>
-                                )}
+                                  )
+                                })()}
                                 {/* SURVEY */}
                                 {lesson.type === 'survey' && (
                                   <div className="mt-2 bg-blue-50 border border-blue-100 rounded-xl p-3 space-y-2">

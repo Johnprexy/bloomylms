@@ -127,3 +127,16 @@ export async function POST(request: NextRequest) {
 
   return NextResponse.json({ data: { quiz_id: quizIdResult, question_count: questions?.length || 0 } })
 }
+
+export async function DELETE(request: NextRequest) {
+  const session = await getServerSession(authOptions)
+  if (!session?.user || !isAdmin((session.user as any).role)) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+  const { searchParams } = new URL(request.url)
+  const quizId = searchParams.get('quiz_id')
+  if (!quizId) return NextResponse.json({ error: 'quiz_id required' }, { status: 400 })
+  await sql`DELETE FROM quiz_attempts WHERE quiz_id = ${quizId}`
+  await sql`DELETE FROM quiz_questions WHERE quiz_id = ${quizId}`
+  await sql`DELETE FROM grade_items WHERE source_type = 'quiz' AND source_id = ${quizId}`
+  await sql`DELETE FROM quizzes WHERE id = ${quizId}`
+  return NextResponse.json({ success: true })
+}
