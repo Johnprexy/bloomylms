@@ -467,23 +467,33 @@ export default function CourseBuilderPage() {
                                       <p className="text-xs font-semibold text-purple-700 flex items-center gap-1.5">
                                         <HelpCircle className="w-3.5 h-3.5" />Quiz Questions
                                       </p>
-                                      {lesson.id ? (
-                                        <button type="button"
-                                          onClick={() => setQuizLesson({ id: lesson.id!, title: lesson.title || 'Quiz' })}
-                                          className="text-xs bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-semibold flex items-center gap-1.5 shadow-sm">
-                                          <HelpCircle className="w-3.5 h-3.5" />Build / Edit Quiz
-                                        </button>
-                                      ) : (
-                                        <button type="button" onClick={async () => { await saveCourse(false) }}
-                                          className="text-xs bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-semibold flex items-center gap-1.5 shadow-sm">
-                                          <Save className="w-3.5 h-3.5" />Save Draft First
-                                        </button>
-                                      )}
+                                      <button type="button"
+                                        onClick={async () => {
+                                          // Save first to get lesson ID, then open quiz builder
+                                          if (!lesson.id) {
+                                            await saveCourse(false)
+                                          }
+                                          // After save, fetch lesson ID from DB by title+module
+                                          if (selectedCourseId) {
+                                            const modsRes = await fetch(`/api/instructor/courses/${selectedCourseId}/modules`).then(r => r.json())
+                                            const dbMod = modsRes.data?.find((m: any) => m.title === modules[mi]?.title) || modsRes.data?.[mi]
+                                            const dbLesson = dbMod?.lessons?.find((l: any) => l.title === lesson.title) || dbMod?.lessons?.[li]
+                                            if (dbLesson?.id) {
+                                              setQuizLesson({ id: dbLesson.id, title: lesson.title || 'Quiz' })
+                                              return
+                                            }
+                                          }
+                                          if (lesson.id) setQuizLesson({ id: lesson.id, title: lesson.title || 'Quiz' })
+                                        }}
+                                        className="text-xs bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-semibold flex items-center gap-1.5 shadow-sm">
+                                        <HelpCircle className="w-3.5 h-3.5" />
+                                        {lesson.id ? 'Build / Edit Quiz' : 'Save & Build Quiz'}
+                                      </button>
                                     </div>
                                     <p className="text-xs text-purple-500">
                                       {lesson.id
-                                        ? '✓ Lesson saved — click "Build / Edit Quiz" to add questions'
-                                        : '① Enter a title → ② Click "Save Draft First" → ③ "Build / Edit Quiz" appears'}
+                                        ? '✓ Ready — click to add/edit questions'
+                                        : 'Click "Save & Build Quiz" — saves the course then opens the quiz builder'}
                                     </p>
                                   </div>
                                 )}
