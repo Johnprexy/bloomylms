@@ -4,12 +4,11 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import {
   PlusCircle, Trash2, GripVertical, Save, ArrowLeft, Video, FileText,
-  HelpCircle, Paperclip, ChevronDown, ChevronRight, Loader2, Globe,
+  Paperclip, ChevronDown, ChevronRight, Loader2, Globe,
   BookOpen, Link2, Type, AlignLeft, Upload, X, ChevronUp, MessageSquare,
   CheckCircle, AlertCircle
 } from 'lucide-react'
 import Link from 'next/link'
-import QuizBuilder from '@/components/admin/QuizBuilder'
 import FileUpload from '@/components/ui/FileUpload'
 import { slugify } from '@/lib/utils'
 
@@ -19,7 +18,6 @@ const LESSON_TYPES = [
   { value: 'video',       label: 'Video',       icon: Video },
   { value: 'file',        label: 'File',        icon: FileText },
   { value: 'url',         label: 'URL',         icon: Link2 },
-  { value: 'quiz',        label: 'Quiz',        icon: HelpCircle },
   { value: 'assignment',  label: 'Assignment',  icon: Paperclip },
   { value: 'survey',      label: 'Survey',      icon: MessageSquare },
 ]
@@ -36,7 +34,6 @@ export default function CourseBuilderPage() {
   const [saving, setSaving] = useState(false)
   const [saveMsg, setSaveMsg] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
   const [expandedModules, setExpandedModules] = useState<Set<number>>(new Set([0]))
-  const [quizLesson, setQuizLesson] = useState<{ id: string; title: string } | null>(null)
 
   const [info, setInfo] = useState({
     title: '', slug: '', short_description: '', description: '',
@@ -186,18 +183,14 @@ export default function CourseBuilderPage() {
   }
 
   // ── open quiz builder ──
-  const [openingQuiz, setOpeningQuiz] = useState<string | null>(null)
 
   async function openQuizBuilder(mi: number, li: number, lesson: any) {
     const key = `${mi}-${li}`
-    setOpeningQuiz(key)
     setSaveMsg(null)
 
     try {
       // If lesson already has a DB id, open directly - no save needed
       if (lesson.id) {
-        setQuizLesson({ id: lesson.id, title: lesson.title || 'Quiz' })
-        setOpeningQuiz(null)
         return
       }
 
@@ -205,7 +198,6 @@ export default function CourseBuilderPage() {
       if (!info.title?.trim()) {
         setSaveMsg({ type: 'error', text: 'Enter a course title first' })
         setTab('info')
-        setOpeningQuiz(null)
         return
       }
 
@@ -226,7 +218,6 @@ export default function CourseBuilderPage() {
 
       if (res.error || !res.data?.id) {
         setSaveMsg({ type: 'error', text: 'Save failed: ' + (res.error || 'unknown') })
-        setOpeningQuiz(null)
         return
       }
 
@@ -250,8 +241,6 @@ export default function CourseBuilderPage() {
           sl.module_position === mi && sl.lesson_position === li
         )
         if (thisLesson?.id) {
-          setQuizLesson({ id: thisLesson.id, title: lesson.title || 'Quiz' })
-          setOpeningQuiz(null)
           return
         }
       }
@@ -260,7 +249,6 @@ export default function CourseBuilderPage() {
     } catch (e: any) {
       setSaveMsg({ type: 'error', text: 'Error: ' + e.message })
     }
-    setOpeningQuiz(null)
   }
 
     // ── helpers ──
@@ -536,58 +524,6 @@ export default function CourseBuilderPage() {
                                     <p className="text-xs text-orange-600 flex items-center gap-1.5"><Paperclip className="w-3 h-3" />Students will upload a file to submit</p>
                                   </div>
                                 )}
-                                {/* QUIZ */}
-                                {lesson.type === 'quiz' && (() => {
-                                  const hasQuiz = !!(lesson as any).quiz_id
-                                  const qCount = (lesson as any).quiz_question_count || 0
-                                  const qTitle = (lesson as any).quiz_title || lesson.title
-                                  const passScore = (lesson as any).quiz_passing_score || 70
-                                  const attAllowed = (lesson as any).quiz_attempts_allowed || 3
-                                  return (
-                                    <div className={`mt-2 rounded-xl border overflow-hidden ${hasQuiz ? 'border-green-200' : 'border-purple-100'}`}>
-                                      {/* Quiz info header */}
-                                      <div className={`flex items-center gap-3 px-3 py-2.5 ${hasQuiz ? 'bg-green-50' : 'bg-purple-50'}`}>
-                                        <HelpCircle className={`w-4 h-4 flex-shrink-0 ${hasQuiz ? 'text-green-600' : 'text-purple-500'}`} />
-                                        <div className="flex-1 min-w-0">
-                                          {hasQuiz ? (
-                                            <div className="flex items-center gap-2 flex-wrap">
-                                              <span className="text-xs font-bold text-green-700">{qTitle}</span>
-                                              <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-medium">{qCount} question{qCount !== 1 ? 's' : ''}</span>
-                                              <span className="text-xs text-green-600">Pass: {passScore}%</span>
-                                              <span className="text-xs text-green-600">{attAllowed} attempt{attAllowed !== 1 ? 's' : ''}</span>
-                                            </div>
-                                          ) : (
-                                            <span className="text-xs font-medium text-purple-600">No quiz built yet — click Build Quiz</span>
-                                          )}
-                                        </div>
-                                        <div className="flex items-center gap-1.5 flex-shrink-0">
-                                          {hasQuiz && (
-                                            <button type="button"
-                                              onClick={async () => {
-                                                if (!confirm('Delete this quiz and all its questions? This cannot be undone.')) return
-                                                const qid = (lesson as any).quiz_id
-                                                await fetch(`/api/admin/quiz-builder?quiz_id=${qid}`, { method: 'DELETE' })
-                                                updLesson(mi, li, 'quiz_id', null)
-                                                updLesson(mi, li, 'quiz_question_count', 0)
-                                                updLesson(mi, li, 'hasQuiz', false)
-                                              }}
-                                              className="text-xs text-red-400 hover:text-red-600 hover:bg-red-50 px-2 py-1.5 rounded-lg flex items-center gap-1 transition-colors">
-                                              <Trash2 className="w-3.5 h-3.5" />Delete Quiz
-                                            </button>
-                                          )}
-                                          <button type="button"
-                                            disabled={openingQuiz === `${mi}-${li}`}
-                                            onClick={() => openQuizBuilder(mi, li, lesson)}
-                                            className={`text-xs px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1.5 disabled:opacity-70 ${hasQuiz ? 'bg-bloomy-600 hover:bg-bloomy-700 text-white' : 'bg-purple-600 hover:bg-purple-700 text-white'}`}>
-                                            {openingQuiz === `${mi}-${li}`
-                                              ? <><Loader2 className="w-3 h-3 animate-spin" />Opening...</>
-                                              : <><HelpCircle className="w-3 h-3" />{hasQuiz ? 'Edit Quiz' : 'Build Quiz'}</>}
-                                          </button>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  )
-                                })()}
                                 {/* SURVEY */}
                                 {lesson.type === 'survey' && (
                                   <div className="mt-2 bg-blue-50 border border-blue-100 rounded-xl p-3 space-y-2">
@@ -625,35 +561,7 @@ export default function CourseBuilderPage() {
         </>
       )}
 
-      {/* Quiz Builder Modal */}
-      {quizLesson && (
-        <QuizBuilder
-          lessonId={quizLesson.id}
-          lessonTitle={quizLesson.title}
-          courseId={selectedCourseId || undefined}
-          onClose={async () => {
-            // On close, re-fetch all lesson quiz statuses from DB
-            if (selectedCourseId) {
-              const modsRes = await fetch(`/api/instructor/courses/${selectedCourseId}/modules`).then(r => r.json())
-              if (modsRes.data?.length) {
-                setModules(prev => prev.map((mod: any, mi: number) => {
-                  const dbMod = modsRes.data[mi]
-                  if (!dbMod) return mod
-                  return {
-                    ...mod,
-                    lessons: mod.lessons.map((l: any, li: number) => {
-                      const dbLesson = dbMod.lessons?.[li] || dbMod.lessons?.find((dl: any) => dl.id === l.id)
-                      return dbLesson ? { ...l, hasQuiz: !!dbLesson.quiz_id } as any : l
-                    })
-                  }
-                }))
-              }
-            }
-            setQuizLesson(null)
-          }}
-          onSaved={() => {}}
-        />
-      )}
+
     </div>
   )
 }
