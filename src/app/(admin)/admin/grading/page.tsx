@@ -17,8 +17,15 @@ export default function GradingPage() {
 
   async function loadQueue() {
     const d = await fetch('/api/v2/grading').then(r => r.json())
-    setQueue(d.data || [])
+    const q = d.data || []
+    setQueue(q)
     setLoading(false)
+    // Restore attempt from URL
+    const attemptId = getParam('attempt')
+    if (attemptId) {
+      const found = q.find((a: any) => a.attempt_id === attemptId)
+      if (found) openAttempt(found)
+    }
   }
 
   async function openAttempt(attempt: any) {

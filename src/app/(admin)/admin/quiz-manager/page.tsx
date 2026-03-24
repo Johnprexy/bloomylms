@@ -23,9 +23,10 @@ export default function QuizManagerPage() {
   const [creating, setCreating] = useState(false)
   const [selectedCourseForNew, setSelectedCourseForNew] = useState('')
 
+  useEffect(() => { load(true) }, [])
   useEffect(() => { load() }, [filterCourse, filterStatus])
 
-  async function load() {
+  async function load(restoreEdit = false) {
     setLoading(true)
     const params = new URLSearchParams()
     if (filterCourse) params.set('course_id', filterCourse)
@@ -35,9 +36,16 @@ export default function QuizManagerPage() {
       fetch('/api/v2/quizzes?' + params).then(r => r.json()),
       fetch('/api/admin/course-builder').then(r => r.json()),
     ])
-    setQuizzes(qRes.data || [])
+    const quizList = qRes.data || []
+    setQuizzes(quizList)
     setCourses(cRes.data || [])
     setLoading(false)
+    // Restore editing state from URL
+    const editId = getParam('edit')
+    if (editId && restoreEdit) {
+      const found = quizList.find((q: any) => q.id === editId)
+      if (found) setEditingQuiz(found)
+    }
   }
 
   async function deleteQuiz(id: string, title: string) {
@@ -92,7 +100,7 @@ export default function QuizManagerPage() {
           <option value="published">Published</option>
           <option value="archived">Archived</option>
         </select>
-        <button onClick={load} className="btn-secondary text-sm px-4 py-2.5">Search</button>
+        <button onClick={() => load()} className="btn-secondary text-sm px-4 py-2.5">Search</button>
       </div>
 
       {/* Stats bar */}
@@ -155,7 +163,7 @@ export default function QuizManagerPage() {
                     </td>
                     <td className="px-4 py-3.5">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => setEditingQuiz(q)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-bloomy-50 text-bloomy-600" title="Edit"><Edit className="w-3.5 h-3.5" /></button>
+                        <button onClick={() => { setEditingQuiz(q); setParam('edit', q.id) }} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-bloomy-50 text-bloomy-600" title="Edit"><Edit className="w-3.5 h-3.5" /></button>
                         <button onClick={() => duplicateQuiz(q)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500" title="Duplicate"><Copy className="w-3.5 h-3.5" /></button>
                         <button onClick={() => deleteQuiz(q.id, q.title)} className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-red-50 text-red-400" title="Delete"><Trash2 className="w-3.5 h-3.5" /></button>
                       </div>
@@ -195,7 +203,7 @@ export default function QuizManagerPage() {
         <QuizBuilderV2
           quizId={editingQuiz._new ? undefined : editingQuiz.id}
           courseId={editingQuiz.course_id || editingQuiz._new ? selectedCourseForNew : undefined}
-          onClose={() => { setEditingQuiz(null); load() }}
+          onClose={() => { setEditingQuiz(null); setParam('edit', null); load() }}
           onSaved={() => load()}
         />
       )}

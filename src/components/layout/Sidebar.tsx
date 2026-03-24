@@ -15,10 +15,8 @@ import {
 const studentNav = [
   { href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
   { href: '/dashboard/my-courses', icon: BookMarked, label: 'My Courses' },
+  { href: '/dashboard/my-quizzes', icon: HelpCircle, label: 'My Quizzes' },
   { href: '/dashboard/labs', icon: FlaskConical, label: 'Labs & Resources' },
-  { href: '/dashboard/my-quizzes', icon: HelpCircle, label: 'My Quizzes' },
-  { href: '/dashboard/my-quizzes', icon: HelpCircle, label: 'My Quizzes' },
-  { href: '/dashboard/my-quizzes', icon: HelpCircle, label: 'My Quizzes' },
   { href: '/dashboard/live-sessions', icon: Video, label: 'Live Sessions' },
   { href: '/dashboard/certificates', icon: Award, label: 'Certificates' },
   { href: '/dashboard/profile', icon: User, label: 'Profile' },
@@ -44,7 +42,7 @@ const adminNav = [
   { href: '/admin/gradebook', icon: Star, label: 'Gradebook' },
   { href: '/admin/surveys', icon: MessageSquare, label: 'Surveys & Polls' },
   { href: '/admin/quiz-manager', icon: HelpCircle, label: 'Quiz Manager' },
-  { href: '/admin/grading', icon: ClipboardList, label: 'Grading Queue' },
+  { href: '/admin/grading', icon: CheckSquare, label: 'Grading Queue' },
 ]
 
 const superAdminNav = [

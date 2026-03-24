@@ -46,8 +46,15 @@ export default function SurveysPage() {
       fetch('/api/admin/surveys').then(r => r.json()),
       fetch('/api/admin/cohorts-full').then(r => r.json()),
     ]).then(([sd, cd]) => {
-      setSurveys(sd.surveys || [])
+      const surveys = sd.surveys || []
+      setSurveys(surveys)
       setCourses(sd.courses || [])
+      // Restore from URL
+      const surveyId = getParam('id')
+      if (surveyId) {
+        const found = surveys.find((s: any) => s.id === surveyId)
+        if (found) setSelected(found)
+      }
       setModules(sd.modules || [])
       setCohorts(cd.cohorts || [])
       setLoading(false)
@@ -88,6 +95,7 @@ export default function SurveysPage() {
 
   async function viewResults(survey: any) {
     setSelected(survey)
+    setParam('id', survey.id)
     const d = await fetch(`/api/admin/surveys?id=${survey.id}`).then(r => r.json())
     setResults(d)
     setView('results')

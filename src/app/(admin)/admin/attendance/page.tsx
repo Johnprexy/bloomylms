@@ -22,6 +22,7 @@ export default function AttendancePage() {
   const [savedMsg, setSavedMsg] = useState('')
 
   // Selection
+  const { getParam, setParam, clearParams } = useUrlState()
   const [selCohort,  setSelCohort]  = useState<any>(null)
   const [selCourse,  setSelCourse]  = useState<any>(null)   // { course_id, course_title }
   const [selModule,  setSelModule]  = useState<any>(null)   // full module row
@@ -39,13 +40,21 @@ export default function AttendancePage() {
 
   useEffect(() => {
     fetch('/api/admin/attendance').then(r => r.json()).then(d => {
-      setCohorts(d.cohorts || [])
+      const ch = d.cohorts || []
+      setCohorts(ch)
       setLoading(false)
+      // Restore selections from URL
+      const cohortId = getParam('cohort')
+      const courseId = getParam('course')
+      if (cohortId) {
+        const cohort = ch.find((c: any) => c.id === cohortId)
+        if (cohort) setSelCohort(cohort)
+      }
     })
   }, [])
 
   async function selectCourse(c: any) {
-    setSelCourse(c); setSelModule(null); setSelSession(null); setStudents([]); setRecords({})
+    setSelCourse(c); setSelModule(null); setSelSession(null); setParam('course', c?.course_id || null); setStudents([]); setRecords({})
     const d = await fetch(`/api/admin/attendance?course_id=${c.course_id}&cohort_id=${selCohort?.id}`).then(r => r.json())
     setModules(d.modules || [])
     setSessions(d.sessions || [])
@@ -159,7 +168,7 @@ export default function AttendancePage() {
               <p className="text-xs text-gray-400 text-center py-8 px-4">No cohorts yet.<br/>Create one in Admin → Cohorts</p>
             ) : uniqueCohorts.map((c: any) => (
               <button key={c.id}
-                onClick={() => { setSelCohort(c); setSelCourse(null); setSelModule(null); setSelSession(null); setStudents([]) }}
+                onClick={() => { setSelCohort(c); setSelCourse(null); setSelModule(null); setSelSession(null); setParam('cohort', c?.id || null); setStudents([]) }}
                 className={`w-full text-left px-4 py-3.5 hover:bg-gray-50 transition-colors ${selCohort?.id === c.id ? 'bg-bloomy-50 border-l-2 border-bloomy-500' : ''}`}>
                 <p className="text-sm font-semibold text-gray-900">{c.name}</p>
                 <p className="text-xs text-gray-400 mt-0.5">{c.student_count} students</p>
