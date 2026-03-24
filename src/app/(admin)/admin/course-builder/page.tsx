@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import {
   PlusCircle, Trash2, GripVertical, Save, ArrowLeft, Video, FileText,
   HelpCircle, Paperclip, ChevronDown, ChevronRight, Loader2, Globe,
@@ -29,6 +29,7 @@ const emptyModule = (n: number) => ({ id: null as string | null, title: `Module 
 
 export default function CourseBuilderPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const [categories, setCategories] = useState<any[]>([])
   const [courses, setCourses] = useState<any[]>([])
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null)
@@ -55,6 +56,11 @@ export default function CourseBuilderPage() {
     ]).then(([cats, crs]) => {
       setCategories(cats.data || [])
       setCourses(crs.data || [])
+      // Restore course from URL on refresh
+      const urlCourseId = searchParams.get('course')
+      if (urlCourseId) {
+        loadCourse(urlCourseId, false)
+      }
     })
   }, [])
 
@@ -98,6 +104,8 @@ export default function CourseBuilderPage() {
     setSelectedCourseId(courseId)
     setExpandedModules(new Set([0]))
     if (!keepTab) setTab('info')
+    // Put course ID in URL so refresh returns to this course
+    router.replace(`/admin/course-builder?course=${courseId}`, { scroll: false })
   }
 
   function newCourse() {
@@ -107,6 +115,7 @@ export default function CourseBuilderPage() {
     setExpandedModules(new Set([0]))
     setTab('info')
     setSaveMsg(null)
+    router.replace('/admin/course-builder', { scroll: false })
   }
 
   async function saveCourse(publish = false) {
@@ -151,6 +160,7 @@ export default function CourseBuilderPage() {
       if (res.data) {
         const newId = res.data.id
         setSelectedCourseId(newId)
+        router.replace(`/admin/course-builder?course=${newId}`, { scroll: false })
 
         // Refresh course list in background
         fetch('/api/admin/course-builder').then(r => r.json()).then(crs => setCourses(crs.data || []))
