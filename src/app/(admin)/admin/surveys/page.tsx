@@ -1,4 +1,5 @@
 'use client'
+import { useUrlState } from '@/lib/useUrlState'
 import { useState, useEffect } from 'react'
 import { Plus, Trash2, Loader2, ClipboardList, BarChart2, CheckCircle, ChevronDown, ChevronUp, Edit, Copy, Link2, X, AlertTriangle, Users } from 'lucide-react'
 
@@ -28,6 +29,7 @@ export default function SurveysPage() {
   const [loading, setLoading]   = useState(true)
   const [saving, setSaving]     = useState(false)
   const [view, setView]         = useState<'list' | 'edit' | 'results'>('list')
+  const { getParam, setParam, clearParams } = useUrlState()
   const [selected, setSelected] = useState<any>(null)
   const [results, setResults]   = useState<any>(null)
   const [copied, setCopied]     = useState<string | null>(null)

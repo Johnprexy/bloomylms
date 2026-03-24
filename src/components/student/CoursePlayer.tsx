@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { useRouter, usePathname, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, ChevronDown, ChevronRight, CheckCircle, Play, FileText, HelpCircle, Paperclip, Menu, X, BookOpen, Link2, Download, ExternalLink, Upload, Loader2, MessageSquare, Type } from 'lucide-react'
 import { markLessonComplete } from '@/lib/actions/courses'
@@ -21,6 +22,8 @@ interface Props {
 
 export default function CoursePlayer({ course, modules, enrollment, lessonProgress, userId, userName = '', initialLessonId, initialTab = 'content' }: Props) {
   const allLessons = modules.flatMap(m => (m.lessons || []).filter((l: any) => l.type !== 'text_header'))
+  const router = useRouter()
+  const pathname = usePathname()
   const startLesson = initialLessonId ? allLessons.find(l => l.id === initialLessonId) : allLessons[0]
   const [currentLesson, setCurrentLesson] = useState<any>(startLesson || allLessons[0] || null)
   const [progress, setProgress] = useState<Record<string, boolean>>(
@@ -90,6 +93,7 @@ export default function CoursePlayer({ course, modules, enrollment, lessonProgre
 
   function goToLesson(lesson: any) {
     setCurrentLesson(lesson)
+    const params = new URLSearchParams(window.location.search); params.set('lesson', lesson.id); router.replace(pathname + '?' + params.toString(), { scroll: false })
     setActiveTab('content')
     if (window.innerWidth < 1024) setSidebarOpen(false)
     window.scrollTo(0, 0)

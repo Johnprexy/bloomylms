@@ -1,4 +1,5 @@
 'use client'
+import { useUrlState } from '@/lib/useUrlState'
 import { useState, useEffect, useCallback } from 'react'
 import { Download, Loader2, ChevronDown, Save, Filter, BarChart2, Users, BookOpen, Star, FileText } from 'lucide-react'
 
@@ -26,8 +27,9 @@ export default function GradebookPage() {
   const [selectedStudent, setSelectedStudent] = useState<any>(null)
 
   // Filters
-  const [filterCohort, setFilterCohort] = useState('')
-  const [filterCourse, setFilterCourse] = useState('')
+  const { getParam, setParam } = useUrlState()
+  const [filterCohort, setFilterCohort] = useState(() => getParam('cohort') || '')
+  const [filterCourse, setFilterCourse] = useState(() => getParam('course') || '')
   const [filterStudent, setFilterStudent] = useState('')
 
   // Unique cohorts
@@ -136,14 +138,14 @@ export default function GradebookPage() {
         <div className="grid sm:grid-cols-3 gap-3">
           <div className="relative">
             <label className="block text-xs font-medium text-gray-500 mb-1">Cohort</label>
-            <select value={filterCohort} onChange={e => { setFilterCohort(e.target.value); setFilterCourse('') }} className={selClass}>
+            <select value={filterCohort} onChange={e => { setFilterCohort(e.target.value); setFilterCourse(''); setParam('course', '') }} className={selClass}>
               <option value="">All Cohorts</option>
               {uniqueCohorts.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
             </select>{sel}
           </div>
           <div className="relative">
             <label className="block text-xs font-medium text-gray-500 mb-1">Course</label>
-            <select value={filterCourse} onChange={e => setFilterCourse(e.target.value)} className={selClass}>
+            <select value={filterCourse} onChange={e => { setFilterCourse(e.target.value); setParam('course', e.target.value) }} className={selClass}>
               <option value="">All Courses</option>
               {(filterCohort ? cohortCourses : courses).map((c: any) => (
                 <option key={c.course_id || c.id} value={c.course_id || c.id}>{c.course_title || c.title}</option>

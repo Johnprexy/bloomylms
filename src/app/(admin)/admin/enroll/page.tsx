@@ -1,5 +1,6 @@
 'use client'
 
+import { useUrlState } from '@/lib/useUrlState'
 import { useState, useEffect, useRef } from 'react'
 import { UserPlus, Upload, CheckCircle, Loader2, X, AlertCircle, Mail, Users, Clock, RefreshCw, Trash2, Plus, Copy, Eye, EyeOff } from 'lucide-react'
 
@@ -25,7 +26,8 @@ export default function EnrollPage() {
 
   // Bulk CSV paste
   const [bulkText, setBulkText] = useState('')
-  const [tab, setTab] = useState<'single' | 'bulk' | 'csv'>('single')
+  const { getParam, setParam } = useUrlState()
+  const [tab, setTab] = useState<'single' | 'bulk' | 'csv'>(() => (getParam('tab') as any) || 'single')
 
   const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({})
 
@@ -88,7 +90,7 @@ export default function EnrollPage() {
         const [em, fn, phone, cohort_id, cid] = line.split(',').map(s => s.replace(/"/g, '').trim())
         return { email: em?.toLowerCase() || '', full_name: fn || '', phone: phone || '', cohort_id: cohort_id || '', course_id: cid || courseId || '' }
       }).filter(r => r.email)
-      if (parsed.length) { setBulkRows(parsed); setTab('bulk') }
+      if (parsed.length) { setBulkRows(parsed); { setTab('bulk'); setParam('tab', 'bulk') } }
     }
     reader.readAsText(file)
   }

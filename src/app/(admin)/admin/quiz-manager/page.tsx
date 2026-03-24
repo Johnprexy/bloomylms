@@ -1,4 +1,5 @@
 'use client'
+import { useUrlState } from '@/lib/useUrlState'
 import { useState, useEffect } from 'react'
 import { Plus, Search, Edit, Trash2, BarChart2, Eye, Copy, Loader2, HelpCircle,
   CheckCircle, Clock, Archive, Filter, BookOpen } from 'lucide-react'
@@ -14,9 +15,10 @@ export default function QuizManagerPage() {
   const [quizzes, setQuizzes] = useState<any[]>([])
   const [courses, setCourses] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
-  const [search, setSearch] = useState('')
-  const [filterCourse, setFilterCourse] = useState('')
-  const [filterStatus, setFilterStatus] = useState('')
+  const { getParam, setParam } = useUrlState()
+  const [search, setSearch] = useState(() => getParam('q') || '')
+  const [filterCourse, setFilterCourse] = useState(() => getParam('course') || '')
+  const [filterStatus, setFilterStatus] = useState(() => getParam('status') || '')
   const [editingQuiz, setEditingQuiz] = useState<any>(null)
   const [creating, setCreating] = useState(false)
   const [selectedCourseForNew, setSelectedCourseForNew] = useState('')
@@ -80,11 +82,11 @@ export default function QuizManagerPage() {
           <input value={search} onChange={e => setSearch(e.target.value)} onKeyDown={e => e.key === 'Enter' && load()}
             placeholder="Search quizzes..." className="w-full pl-9 pr-4 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-bloomy-500" />
         </div>
-        <select value={filterCourse} onChange={e => setFilterCourse(e.target.value)} className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-bloomy-500 bg-white">
+        <select value={filterCourse} onChange={e => { setFilterCourse(e.target.value); setParam('course', e.target.value) }} className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-bloomy-500 bg-white">
           <option value="">All Courses</option>
           {courses.map((c: any) => <option key={c.id} value={c.id}>{c.title}</option>)}
         </select>
-        <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-bloomy-500 bg-white">
+        <select value={filterStatus} onChange={e => { setFilterStatus(e.target.value); setParam('status', e.target.value) }} className="px-3 py-2.5 border border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-bloomy-500 bg-white">
           <option value="">All Status</option>
           <option value="draft">Draft</option>
           <option value="published">Published</option>

@@ -1,10 +1,12 @@
 'use client'
+import { useUrlState } from '@/lib/useUrlState'
 import { useState, useEffect } from 'react'
 import { Loader2, CheckCircle, AlertCircle, User, BookOpen, Clock, ArrowLeft, Save } from 'lucide-react'
 
 export default function GradingPage() {
   const [queue, setQueue] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const { getParam, setParam, clearParams } = useUrlState()
   const [selected, setSelected] = useState<any>(null)
   const [attemptDetail, setAttemptDetail] = useState<any>(null)
   const [grades, setGrades] = useState<Record<string, { score: string; feedback: string }>>({})
@@ -21,6 +23,7 @@ export default function GradingPage() {
 
   async function openAttempt(attempt: any) {
     setSelected(attempt)
+    setParam('attempt', attempt.attempt_id)
     setGrades({})
     const d = await fetch(`/api/v2/attempts/${attempt.attempt_id}/grade`).then(r => r.json())
     setAttemptDetail(d.data)
@@ -64,7 +67,7 @@ export default function GradingPage() {
     return (
       <div className="max-w-3xl mx-auto space-y-5">
         <div className="flex items-center gap-3">
-          <button onClick={() => { setSelected(null); setAttemptDetail(null) }} className="text-gray-400 hover:text-gray-600"><ArrowLeft className="w-5 h-5" /></button>
+          <button onClick={() => { setSelected(null); setAttemptDetail(null); clearParams('attempt') }} className="text-gray-400 hover:text-gray-600"><ArrowLeft className="w-5 h-5" /></button>
           <div>
             <h1 className="text-xl font-bold text-gray-900">Grade Submission</h1>
             <p className="text-sm text-gray-500">{selected.student_name} · {selected.quiz_title}</p>
